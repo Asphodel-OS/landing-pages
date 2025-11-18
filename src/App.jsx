@@ -5,8 +5,8 @@ const layers = [
 	// Parallax via curve exponents:
 	// Larger power -> slower early movement (background), smaller power (<1) -> faster early movement (foreground).
 	{ src: "/assets/title screen/Backdrop_dark.png", power: 20, z: 0 },
-	{ src: "/assets/title screen/Mountain_range.png", power: 15, z: 10, offsetVH: 0.545 },
-	{ src: "/assets/title screen/River.png", power: 15, z: 20, offsetVH: 0.55 },
+	{ src: "/assets/title screen/Mountain_range.png", power: 10, z: 10, offsetVH: 0.545 },
+	{ src: "/assets/title screen/River.png", power: 13, z: 20, offsetVH: 0.55 },
 	{ src: "/assets/title screen/Gravestones.png", power: 14, z: 30, offsetVH: 0.6 },
 	{ src: "/assets/title screen/Torii_gate.png", power: 12, z: 40, offsetVH: 0.55 },
 	{ src: "/assets/title screen/Spirit_orb.png", power: 10, z: 1 },
@@ -56,26 +56,29 @@ function ParallaxScene() {
 	// Each layer starts at the image top (y=0) and moves up to reveal the bottom
 	// (y = -backdropTravel). We keep parallax by using different curve exponents.
 
+	// Reserve a small portion of the timeline for the studio intro before step 1
+	const introFraction = 0.12
+
 	const steps = [
 		{
-			heading: "Enter the Afterlife",
-			text: "Awaken at the river’s edge as the veil between worlds parts.",
+			heading: "Game Over",
+			text: "Your assertions of WAGMI were not enough to save you.",
 		},
 		{
-			heading: "Echoes of the Mountain",
-			text: "The wind carries names you once knew. Do you remember yours?",
+			heading: "Now you are falling.",
+			text: "You climbed to such heights, what did you expect?",
 		},
 		{
-			heading: "Gravestones Whisper",
-			text: "Memories take form—markers of choices made and paths untaken.",
+			heading: "Don't worry.",
+			text: "You're only dust now.",
 		},
 		{
-			heading: "Gate of Passage",
-			text: "Beneath the torii, the path is clear. Step lightly, seeker.",
+			heading: "How about a different game?",
+			text: "You always liked playing games.",
 		},
 		{
-			heading: "Choose Your Rite",
-			text: "The ritual begins when you are ready. The spirits await.",
+			heading: "Begin the Afterlife",
+			text: "Your next chapter begins here.",
 		},
 	]
 
@@ -108,10 +111,42 @@ function ParallaxScene() {
 						/>
 					)
 				})}
+				{/* Intro overlay: Asphodel Studios presents */}
+				{(() => {
+					const fadeInEnd = introFraction * 0.45
+					const holdEnd = introFraction * 0.85
+					const opacity = useTransform(
+						scrollYProgress,
+						[0, fadeInEnd, holdEnd, introFraction],
+						[0, 1, 1, 0]
+					)
+					const y = useTransform(scrollYProgress, [0, introFraction], [20, -10])
+					return (
+						<motion.div
+							className="absolute inset-0 z-[95] flex items-start justify-center pt-10 px-6"
+							style={{ opacity }}
+						>
+							<motion.div
+								className="bg-black/55 border-4 border-gray-700 rounded-lg max-w-md w-full px-6 py-5 text-center"
+								style={{ y }}
+							>
+								<img
+									src="/assets/title screen/asphodel.png"
+									alt="Asphdel Studios"
+									className="h-14 object-contain mx-auto mb-3"
+									draggable={false}
+								/>
+								<p className="text-indigo-100 text-sm leading-7 font-pixel tracking-wide">
+									PRESENTS
+								</p>
+							</motion.div>
+						</motion.div>
+					)
+				})()}
 				{steps.map((step, i) => {
 					const len = steps.length
-					const start = i / len
-					const end = (i + 1) / len
+					const start = introFraction + (i / len) * (1 - introFraction)
+					const end = introFraction + ((i + 1) / len) * (1 - introFraction)
 					const opacity = useTransform(
 						scrollYProgress,
 						[start, start + 0.08, end - 0.08, end],
