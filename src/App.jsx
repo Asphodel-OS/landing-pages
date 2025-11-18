@@ -4,15 +4,15 @@ import { motion, useScroll, useTransform } from "framer-motion"
 const layers = [
 	// Parallax via curve exponents:
 	// Larger power -> slower early movement (background), smaller power (<1) -> faster early movement (foreground).
-	{ src: "/assets/title screen/Backdrop_dark.png", power: 20, z: 0 },
-	{ src: "/assets/title screen/Mountain_range.png", power: 10, z: 10, offsetVH: 0.545 },
-	{ src: "/assets/title screen/River.png", power: 13, z: 20, offsetVH: 0.55 },
-	{ src: "/assets/title screen/Gravestones.png", power: 14, z: 30, offsetVH: 0.6 },
-	{ src: "/assets/title screen/Torii_gate.png", power: 12, z: 40, offsetVH: 0.55 },
-	{ src: "/assets/title screen/Spirit_orb.png", power: 10, z: 1 },
-	{ src: "/assets/title screen/Butterflies_3.png", power: 0.75, z: 60 },
-	{ src: "/assets/title screen/Butterflies_2.png", power: 0.8, z: 70 },
-	{ src: "/assets/title screen/Butterflies_1.png", power: 0.6, z: 80 },
+	{ src: "/assets/title-screen/Backdrop_dark.png", power: 20, z: 0 },
+	{ src: "/assets/title-screen/Mountain_range.png", power: 10, z: 10, offsetVH: 0.545 },
+	{ src: "/assets/title-screen/River.png", power: 13, z: 20, offsetVH: 0.55 },
+	{ src: "/assets/title-screen/Gravestones.png", power: 14, z: 30, offsetVH: 0.6 },
+	{ src: "/assets/title-screen/Torii_gate.png", power: 12, z: 40, offsetVH: 0.55 },
+	{ src: "/assets/title-screen/Spirit_orb.png", power: 10, z: 1 },
+	{ src: "/assets/title-screen/Butterflies_3.png", power: 0.75, z: 60 },
+	{ src: "/assets/title-screen/Butterflies_2.png", power: 0.8, z: 70 },
+	{ src: "/assets/title-screen/Butterflies_1.png", power: 0.6, z: 80 },
 ]
 
 function ParallaxScene() {
@@ -36,7 +36,8 @@ function ParallaxScene() {
 	// Measure how much vertical content the backdrop can reveal when using object-cover
 	useEffect(() => {
 		const img = new Image()
-		img.src = "/assets/title screen/Backdrop.png"
+		// Use the same source as the first layer to match whichever backdrop is active
+		img.src = layers[0].src
 		const compute = () => {
 			if (!img.naturalWidth || !img.naturalHeight || !viewport.w || !viewport.h) return
 			const scale = Math.max(viewport.w / img.naturalWidth, viewport.h / img.naturalHeight)
@@ -131,7 +132,7 @@ function ParallaxScene() {
 								style={{ y }}
 							>
 								<img
-									src="/assets/title screen/asphodel.png"
+									src="/assets/title-screen/asphodel.png"
 									alt="Asphdel Studios"
 									className="h-14 object-contain mx-auto mb-3"
 									draggable={false}
