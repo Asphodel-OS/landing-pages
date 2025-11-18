@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+	--page-bg: #0f1130;
+}
+
+html,
+body,
+#root {
+	height: 100%;
+}
+
+body {
+	background: var(--page-bg);
+	margin: 0;
+	font-family: "Press Start 2P", cursive;
+}
+
+.pixel-button {
+	font-family: "Press Start 2P", cursive;
+	color: white;
+	padding: 8px 16px;
+	border: none;
+	text-transform: uppercase;
+	cursor: pointer;
+	image-rendering: pixelated;
+}
+
+
