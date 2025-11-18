@@ -1,16 +1,18 @@
-import React, { useRef } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 
 const layers = [
-	{ src: "/assets/title screen/Backdrop.png", speed: 0.1, z: 0 },
-	{ src: "/assets/title screen/Mountain_range.png", speed: 0.2, z: 10 },
-	{ src: "/assets/title screen/River.png", speed: 0.35, z: 20 },
-	{ src: "/assets/title screen/Gravestones.png", speed: 0.45, z: 30 },
-	{ src: "/assets/title screen/Torii_gate.png", speed: 0.55, z: 40 },
-	{ src: "/assets/title screen/Spirit_orb.png", speed: 0.75, z: 50 },
-	{ src: "/assets/title screen/Butterflies_3.png", speed: 0.85, z: 60 },
-	{ src: "/assets/title screen/Butterflies_2.png", speed: 0.9, z: 70 },
-	{ src: "/assets/title screen/Butterflies_1.png", speed: 1.0, z: 80 },
+	// Parallax via curve exponents:
+	// Larger power -> slower early movement (background), smaller power (<1) -> faster early movement (foreground).
+	{ src: "/assets/title screen/Backdrop_dark.png", power: 20, z: 0 },
+	{ src: "/assets/title screen/Mountain_range.png", power: 15, z: 10, offsetVH: 0.545 },
+	{ src: "/assets/title screen/River.png", power: 15, z: 20, offsetVH: 0.55 },
+	{ src: "/assets/title screen/Gravestones.png", power: 14, z: 30, offsetVH: 0.6 },
+	{ src: "/assets/title screen/Torii_gate.png", power: 12, z: 40, offsetVH: 0.55 },
+	{ src: "/assets/title screen/Spirit_orb.png", power: 10, z: 1 },
+	{ src: "/assets/title screen/Butterflies_3.png", power: 0.75, z: 60 },
+	{ src: "/assets/title screen/Butterflies_2.png", power: 0.8, z: 70 },
+	{ src: "/assets/title screen/Butterflies_1.png", power: 0.6, z: 80 },
 ]
 
 function ParallaxScene() {
@@ -19,6 +21,40 @@ function ParallaxScene() {
 		target: containerRef,
 		offset: ["start start", "end start"],
 	})
+
+	// Viewport tracking
+	const [viewport, setViewport] = useState({ w: 0, h: 0 })
+	const [backdropTravel, setBackdropTravel] = useState(300) // fallback travel
+
+	useEffect(() => {
+		const onResize = () => setViewport({ w: window.innerWidth, h: window.innerHeight })
+		onResize()
+		window.addEventListener("resize", onResize)
+		return () => window.removeEventListener("resize", onResize)
+	}, [])
+
+	// Measure how much vertical content the backdrop can reveal when using object-cover
+	useEffect(() => {
+		const img = new Image()
+		img.src = "/assets/title screen/Backdrop.png"
+		const compute = () => {
+			if (!img.naturalWidth || !img.naturalHeight || !viewport.w || !viewport.h) return
+			const scale = Math.max(viewport.w / img.naturalWidth, viewport.h / img.naturalHeight)
+			const displayedHeight = img.naturalHeight * scale
+			const travel = Math.max(0, displayedHeight - viewport.h)
+			setBackdropTravel(travel > 0 ? travel : Math.round(viewport.h * 0.25))
+		}
+		if (img.complete) compute()
+		else img.onload = compute
+	}, [viewport.w, viewport.h])
+
+	const sectionHeight = useMemo(() => {
+		// 5 steps + room to reveal the full image height
+		return Math.round((viewport.h || 600) * 5 + backdropTravel)
+	}, [viewport.h, backdropTravel])
+
+	// Each layer starts at the image top (y=0) and moves up to reveal the bottom
+	// (y = -backdropTravel). We keep parallax by using different curve exponents.
 
 	const steps = [
 		{
@@ -44,10 +80,20 @@ function ParallaxScene() {
 	]
 
 	return (
-		<section ref={containerRef} className="relative h-[600vh] bg-[#0b0d26]">
+		<section
+			ref={containerRef}
+			className="relative bg-[#0b0d26]"
+			style={{ height: `${sectionHeight}px` }}
+		>
 			<div className="sticky top-0 h-screen w-full overflow-hidden">
 				{layers.map((layer) => {
-					const y = useTransform(scrollYProgress, [0, 1], [0, -layer.speed * 300])
+					// Non-linear per-layer progress to restore strong parallax while
+					// keeping all layers aligned at the end frame.
+					const curved = useTransform(scrollYProgress, (v) =>
+						Math.pow(Math.min(1, Math.max(0, v)), layer.power)
+					)
+					const startOffset = (layer.offsetVH || 0) * (viewport.h || 0)
+					const y = useTransform(curved, [0, 1], [startOffset, -backdropTravel])
 					return (
 						<motion.img
 							key={layer.src}
@@ -92,13 +138,13 @@ function ParallaxScene() {
 								{ i === len - 1 && (
 									<div className="mt-8 grid grid-cols-2 gap-4">
 										<a href="#start" className="pixel-button bg-gray-800/80 rounded-lg border-2 border-teal-500 hover:bg-gray-700 text-center py-3">
-											Start Ritual
+											Begin
 										</a>
 										<a href="#explore" className="pixel-button bg-gray-800/80 rounded-lg border-2 border-teal-500 hover:bg-gray-700 text-center py-3">
 											Explore
 										</a>
-										<a href="https://www.nexon.com" target="_blank" rel="noreferrer" className="pixel-button bg-gray-800/80 rounded-lg border-2 border-teal-500 hover:bg-gray-700 text-center py-3">
-											Nexon
+										<a href="https://sudoswap.xyz/" target="_blank" rel="noreferrer" className="pixel-button bg-gray-800/80 rounded-lg border-2 border-teal-500 hover:bg-gray-700 text-center py-3">
+											SudoSwap
 										</a>
 										<a href="#about" className="pixel-button bg-gray-800/80 rounded-lg border-2 border-teal-500 hover:bg-gray-700 text-center py-3">
 											About Us
