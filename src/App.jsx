@@ -167,7 +167,7 @@ function ParallaxScene() {
 								style={{ y }}
 							>
 								<h2 className="text-white text-2xl leading-relaxed font-pixel tracking-wide mb-4">
-									Begin the Afterlife
+									Let's Begin.
 								</h2>
 								<p className="text-indigo-100 text-sm leading-7">
 									Your next chapter begins here.
