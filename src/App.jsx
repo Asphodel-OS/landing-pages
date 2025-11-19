@@ -5,11 +5,11 @@ const layers = [
 	// Parallax via curve exponents:
 	// Larger power -> slower early movement (background), smaller power (<1) -> faster early movement (foreground).
 	{ src: "/assets/title-screen/Backdrop_dark.png", power: 20, z: 0 },
-	{ src: "/assets/title-screen/Mountain_range.png", power: 10, z: 10, offsetVH: 0.545 },
-	{ src: "/assets/title-screen/River.png", power: 13, z: 20, offsetVH: 0.55 },
-	{ src: "/assets/title-screen/Gravestones.png", power: 14, z: 30, offsetVH: 0.6 },
-	{ src: "/assets/title-screen/Torii_gate.png", power: 13.5, z: 40, offsetVH: 0.55 },
-	{ src: "/assets/title-screen/Spirit_orb.png", power: 10, z: 1 },
+	{ src: "/assets/title-screen/Mountain_range.png", power: 8, z: 10, offsetVH: 0.545 },
+	{ src: "/assets/title-screen/River.png", power: 10, z: 20, offsetVH: 0.55 },
+	{ src: "/assets/title-screen/Gravestones.png", power: 11, z: 30, offsetVH: 0.6 },
+	{ src: "/assets/title-screen/Torii_gate.png", power: 12, z: 40, offsetVH: 0.55 },
+	{ src: "/assets/title-screen/Spirit_orb.png", power: 8, z: 1 },
 	{ src: "/assets/title-screen/Butterflies_3.png", power: 0.75, z: 60 },
 	{ src: "/assets/title-screen/Butterflies_2.png", power: 0.8, z: 70 },
 	{ src: "/assets/title-screen/Butterflies_1.png", power: 0.6, z: 80 },
@@ -75,15 +75,16 @@ function ParallaxScene() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [layers.map(l => l.src).join(","), baseSize.w, baseSize.h])
 	const sectionHeight = useMemo(() => {
-		// 5 steps + room to reveal the full image height
-		return Math.round((viewport.h || 600) * 5 + backdropTravel)
+		// Shorter overall scroll: ~3.2 pages + reveal distance
+		const scrollPages = 3.2
+		return Math.round((viewport.h || 600) * scrollPages + backdropTravel)
 	}, [viewport.h, backdropTravel])
 
 	// Each layer starts at the image top (y=0) and moves up to reveal the bottom
 	// (y = -backdropTravel). We keep parallax by using different curve exponents.
 
 	// Reserve a small portion of the timeline for the studio intro before step 1
-	const introFraction = 0.12
+	const introFraction = 0.1
 	// Compute when the final CTA should appear (last fifth of the scroll after intro)
 	const finalStart = introFraction + (4 / 5) * (1 - introFraction)
 
