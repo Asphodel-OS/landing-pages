@@ -28,4 +28,14 @@ body {
 	image-rendering: pixelated;
 }
 
+.pixel-image {
+	/* Ensure nearest-neighbor scaling for pixel art across browsers */
+	image-rendering: pixelated;
+	image-rendering: crisp-edges;
+	/* Firefox specific */
+	image-rendering: -moz-crisp-edges;
+	/* Avoid smoothing on some browsers */
+	-ms-interpolation-mode: nearest-neighbor;
+}
+
 
