@@ -25,6 +25,8 @@ const withLayerOffsets = (overrides = {}) => ({
 	...overrides,
 })
 
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+
 function ParallaxScene() {
 	const containerRef = useRef(null)
 	const { scrollYProgress } = useScroll({
@@ -46,6 +48,7 @@ function ParallaxScene() {
 			scrollPages: 3.2,
 			introFraction: 0.1,
 			layerOffsets: withLayerOffsets(),
+			introDelayFraction: 0.018,
 			ctaRevealRatio: 0.75,
 			introPaddingTop: 48,
 			introPaddingX: 24,
@@ -64,7 +67,8 @@ function ParallaxScene() {
 				...base,
 				scrollPages: 2.3,
 				introFraction: 0.15,
-				ctaRevealRatio: 0.6,
+				introDelayFraction: 0.005,
+				ctaRevealRatio: 0.55,
 				introPaddingTop: 20,
 				introPaddingX: 16,
 				introCardPadding: "16px 18px",
@@ -89,7 +93,8 @@ function ParallaxScene() {
 				...base,
 				scrollPages: 2.6,
 				introFraction: 0.13,
-				ctaRevealRatio: 0.65,
+				introDelayFraction: 0.01,
+				ctaRevealRatio: 0.6,
 				introPaddingTop: 28,
 				introPaddingX: 18,
 				introCardPadding: "18px 22px",
@@ -113,7 +118,8 @@ function ParallaxScene() {
 			return {
 				...base,
 				scrollPages: 3,
-				ctaRevealRatio: 0.72,
+				introDelayFraction: 0.015,
+				ctaRevealRatio: 0.68,
 				introPaddingTop: 36,
 				introPaddingX: 22,
 				ctaWrapperPaddingX: 22,
@@ -134,7 +140,8 @@ function ParallaxScene() {
 				...base,
 				scrollPages: 3.5,
 				introFraction: 0.09,
-				ctaRevealRatio: 0.82,
+				introDelayFraction: 0.03,
+				ctaRevealRatio: 0.76,
 				introPaddingTop: 60,
 				introPaddingX: 30,
 				introCardPadding: "24px 30px",
@@ -160,6 +167,7 @@ function ParallaxScene() {
 		scrollPages,
 		introFraction,
 		layerOffsets: responsiveLayerOffsets,
+		introDelayFraction,
 		introPaddingTop,
 		introPaddingX,
 		introCardPadding,
@@ -228,10 +236,15 @@ function ParallaxScene() {
 	// Reserve a small portion of the timeline for the studio intro before step 1
 	// (adjusted dynamically for extreme aspect ratios).
 	// CTA timings also adapt per-breakpoint so short scrolls still get an early reveal.
-	const ctaFullFraction = introFraction + ctaRevealRatio * (1 - introFraction)
-	const ctaFadeWindow = 0.12
-	const ctaFadeStart = Math.max(introFraction + 0.02, ctaFullFraction - ctaFadeWindow)
-	const finalStart = Math.min(ctaFullFraction, 0.99)
+	const viewportHeight = viewport.h || 1
+	const scrollScreens = scrollPages + backdropTravel / Math.max(1, viewportHeight)
+	const ctaRatioBoost =
+		scrollScreens <= 2.4 ? -0.12 : scrollScreens <= 2.9 ? -0.07 : scrollScreens >= 3.6 ? 0.02 : 0
+	const normalizedCtaRatio = clamp(ctaRevealRatio + ctaRatioBoost, 0.5, 0.88)
+	const ctaFullFraction = introFraction + normalizedCtaRatio * (1 - introFraction)
+	const ctaFadeWindow = clamp((1 - normalizedCtaRatio) * 0.55, 0.08, 0.2)
+	const ctaFadeStart = clamp(ctaFullFraction - ctaFadeWindow, introFraction + 0.015, 0.98)
+	const finalStart = Math.min(ctaFullFraction, 0.985)
 
 	return (
 		<section
@@ -269,14 +282,17 @@ function ParallaxScene() {
 				})}
 				{/* Intro overlay: Asphodel Studios presents */}
 				{(() => {
-					const fadeInEnd = introFraction * 0.45
-					const holdEnd = introFraction * 0.85
+					const latestIntroStart = Math.max(0, introFraction - 0.01)
+					const introStart = Math.min(introDelayFraction, latestIntroStart)
+					const introSpan = Math.max(0.001, introFraction - introStart)
+					const fadeInEnd = introStart + introSpan * 0.4
+					const holdEnd = introStart + introSpan * 0.85
 					const opacity = useTransform(
 						scrollYProgress,
-						[0, fadeInEnd, holdEnd, introFraction],
-						[0, 1, 1, 0]
+						[0, introStart, fadeInEnd, holdEnd, introFraction],
+						[0, 0, 1, 1, 0]
 					)
-					const y = useTransform(scrollYProgress, [0, introFraction], [20, -10])
+					const y = useTransform(scrollYProgress, [introStart, introFraction], [20, -10])
 					return (
 						<motion.div
 							className="absolute inset-0 z-[95] flex items-start justify-center"
@@ -288,18 +304,23 @@ function ParallaxScene() {
 							}}
 						>
 							<motion.div
-								className="bg-black/55 border-4 border-gray-700 rounded-lg w-full text-center"
+								className="relative rounded-2xl border-4 border-gray-700 w-full text-center overflow-hidden shadow-[0_0_40px_rgba(11,21,56,0.65)]"
 								style={{ y, maxWidth: introMaxWidth, padding: introCardPadding }}
 							>
-								<img
-									src="/assets/title-screen/asphodel.png"
-									alt="Asphdel Studios"
-									className="h-14 object-contain mx-auto mb-3"
-									draggable={false}
-								/>
-								<p className="text-indigo-100 text-sm leading-7 font-pixel tracking-wide">
-									PRESENTS
-								</p>
+								<div className="absolute inset-0 bg-gradient-to-b from-[#141b46]/90 via-[#0c102d]/95 to-[#050714] pointer-events-none" />
+								<div className="absolute inset-0 rounded-[18px] border border-white/5 pointer-events-none" />
+								<div className="relative z-10 flex flex-col items-center">
+									<img
+										src="/assets/title-screen/asphodel.png"
+										alt="Asphdel Studios"
+										className="h-14 object-contain mx-auto mt-5 mb-4 drop-shadow-[0_4px_0_rgba(6,9,24,0.8)]"
+										draggable={false}
+									/>
+									<div className="inline-flex items-center gap-2 rounded-full border border-teal-400/50 bg-black/40 px-4 py-2 text-[10px] uppercase tracking-[0.28em] text-teal-200">
+										<span className="h-1.5 w-1.5 rounded-full bg-teal-300 shadow-[0_0_6px_rgba(94,234,212,0.9)]" />
+										<span>Presents</span>
+									</div>
+								</div>
 							</motion.div>
 						</motion.div>
 					)
@@ -320,34 +341,56 @@ function ParallaxScene() {
 							}}
 						>
 							<motion.div
-								className="bg-black border-4 border-gray-700 rounded-lg w-full text-center"
+								className="relative rounded-2xl border-4 border-gray-700 w-full text-center overflow-hidden shadow-[0_0_40px_rgba(11,21,56,0.65)]"
 								style={{ y, maxWidth: ctaMaxWidth, padding: ctaPanelPadding }}
 							>
-								<h2 className="text-white text-2xl leading-relaxed font-pixel tracking-wide mb-4">
-									Let's Begin.
-								</h2>
-								<p className="text-indigo-100 text-sm leading-7">
-									Your next chapter begins here.
-								</p>
-								<div
-									className="mt-8 grid w-full"
-									style={{
-										gap: `${ctaGap}px`,
-										gridTemplateColumns: `repeat(${ctaCols}, minmax(0, 1fr))`,
-									}}
-								>
-									<a href="#start" className="pixel-button bg-gray-800 rounded-lg border-2 border-teal-500 hover:bg-gray-700 text-center py-3">
-										Begin
-									</a>
-									<a href="#explore" className="pixel-button bg-gray-800 rounded-lg border-2 border-teal-500 hover:bg-gray-700 text-center py-3">
-										Explore
-									</a>
-									<a href="https://sudoswap.xyz/" target="_blank" rel="noreferrer" className="pixel-button bg-gray-800 rounded-lg border-2 border-teal-500 hover:bg-gray-700 text-center py-3">
-										SudoSwap
-									</a>
-									<a href="#about" className="pixel-button bg-gray-800 rounded-lg border-2 border-teal-500 hover:bg-gray-700 text-center py-3">
-										About Us
-									</a>
+								<div className="absolute inset-0 bg-gradient-to-b from-[#141b46]/90 via-[#0c102d]/95 to-[#050714] pointer-events-none" />
+								<div className="absolute inset-0 rounded-[18px] border border-white/5 pointer-events-none" />
+								<div className="relative z-10 flex flex-col items-center">
+									<div className="inline-flex items-center gap-2 rounded-full border border-teal-400/50 bg-black/40 px-4 py-2 text-[10px] uppercase tracking-[0.28em] text-teal-200">
+										<span className="h-1.5 w-1.5 rounded-full bg-teal-300 shadow-[0_0_6px_rgba(94,234,212,0.9)]" />
+										<span>Welcome</span>
+									</div>
+									<h2 className="text-white text-3xl leading-relaxed font-pixel tracking-wide mt-6 mb-4 drop-shadow-[0_4px_0_rgba(6,9,24,0.8)]">
+										Let's Begin.
+									</h2>
+									<p className="text-indigo-100 text-sm leading-7 max-w-md">
+										Make a selection.
+									</p>
+									<div
+										className="mt-8 grid w-full"
+										style={{
+											gap: `${ctaGap}px`,
+											gridTemplateColumns: `repeat(${ctaCols}, minmax(0, 1fr))`,
+										}}
+									>
+										<a
+											href="#start"
+											className="pixel-button bg-gradient-to-b from-teal-500 to-teal-700 rounded-lg border-2 border-teal-300/80 hover:brightness-110 text-center py-3 text-[#050714]"
+										>
+											Start New Game
+										</a>
+										<a
+											href="#explore"
+											className="pixel-button bg-gray-900/90 rounded-lg border-2 border-teal-500/70 hover:bg-gray-800 text-center py-3"
+										>
+											Meme Generator
+										</a>
+										<a
+											href="https://sudoswap.xyz/"
+											target="_blank"
+											rel="noreferrer"
+											className="pixel-button bg-gray-900/90 rounded-lg border-2 border-violet-500/80 hover:bg-gray-800 text-center py-3"
+										>
+											SudoSwap
+										</a>
+										<a
+											href="#about"
+											className="pixel-button bg-gray-900/90 rounded-lg border-2 border-blue-500/80 hover:bg-gray-800 text-center py-3"
+										>
+											Stats
+										</a>
+									</div>
 								</div>
 							</motion.div>
 						</motion.div>
