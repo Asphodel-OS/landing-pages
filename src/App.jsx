@@ -15,6 +15,16 @@ const layers = [
 	{ src: "/assets/title-screen/Butterflies_1.png", power: 0.6, z: 80 },
 ]
 
+const defaultLayerOffsets = layers.reduce((acc, layer) => {
+	acc[layer.src] = layer.offsetVH ?? -0.14
+	return acc
+}, {})
+
+const withLayerOffsets = (overrides = {}) => ({
+	...defaultLayerOffsets,
+	...overrides,
+})
+
 function ParallaxScene() {
 	const containerRef = useRef(null)
 	const { scrollYProgress } = useScroll({
@@ -28,6 +38,140 @@ function ParallaxScene() {
 	const [baseSize, setBaseSize] = useState({ w: 0, h: 0 })
 	const [pixelScale, setPixelScale] = useState(1)
 	const [imageSizes, setImageSizes] = useState({})
+
+	const responsive = useMemo(() => {
+		const w = viewport.w || 1440
+		const h = viewport.h || 900
+		const base = {
+			scrollPages: 3.2,
+			introFraction: 0.1,
+			layerOffsets: withLayerOffsets(),
+			ctaRevealRatio: 0.75,
+			introPaddingTop: 48,
+			introPaddingX: 24,
+			introCardPadding: "20px 24px",
+			introMaxWidth: 420,
+			ctaWrapperPaddingX: 24,
+			ctaWrapperPaddingY: 32,
+			ctaPanelPadding: "24px 28px",
+			ctaMaxWidth: 640,
+			ctaCols: 2,
+			ctaGap: 16,
+		}
+
+		if (w <= 480 || h <= 640) {
+			return {
+				...base,
+				scrollPages: 2.3,
+				introFraction: 0.15,
+				ctaRevealRatio: 0.6,
+				introPaddingTop: 20,
+				introPaddingX: 16,
+				introCardPadding: "16px 18px",
+				introMaxWidth: 320,
+				ctaWrapperPaddingX: 16,
+				ctaWrapperPaddingY: 22,
+				ctaPanelPadding: "20px 18px",
+				ctaMaxWidth: 340,
+				ctaCols: 1,
+				ctaGap: 12,
+				layerOffsets: withLayerOffsets({
+					"/assets/title-screen/Mountain_range.png": 0.44,
+					"/assets/title-screen/River.png": 0.48,
+					"/assets/title-screen/Gravestones.png": 0.52,
+					"/assets/title-screen/Torii_gate.png": 0.48,
+				}),
+			}
+		}
+
+		if (w <= 768 || h <= 820) {
+			return {
+				...base,
+				scrollPages: 2.6,
+				introFraction: 0.13,
+				ctaRevealRatio: 0.65,
+				introPaddingTop: 28,
+				introPaddingX: 18,
+				introCardPadding: "18px 22px",
+				introMaxWidth: 360,
+				ctaWrapperPaddingX: 18,
+				ctaWrapperPaddingY: 26,
+				ctaPanelPadding: "22px 22px",
+				ctaMaxWidth: 440,
+				ctaCols: 1,
+				ctaGap: 14,
+				layerOffsets: withLayerOffsets({
+					"/assets/title-screen/Mountain_range.png": 0.48,
+					"/assets/title-screen/River.png": 0.52,
+					"/assets/title-screen/Gravestones.png": 0.56,
+					"/assets/title-screen/Torii_gate.png": 0.52,
+				}),
+			}
+		}
+
+		if (w <= 1200 || h <= 940) {
+			return {
+				...base,
+				scrollPages: 3,
+				ctaRevealRatio: 0.72,
+				introPaddingTop: 36,
+				introPaddingX: 22,
+				ctaWrapperPaddingX: 22,
+				ctaWrapperPaddingY: 30,
+				ctaPanelPadding: "24px 26px",
+				ctaMaxWidth: 560,
+				layerOffsets: withLayerOffsets({
+					"/assets/title-screen/Mountain_range.png": 0.52,
+					"/assets/title-screen/River.png": 0.55,
+					"/assets/title-screen/Gravestones.png": 0.58,
+					"/assets/title-screen/Torii_gate.png": 0.54,
+				}),
+			}
+		}
+
+		if (w >= 1800) {
+			return {
+				...base,
+				scrollPages: 3.5,
+				introFraction: 0.09,
+				ctaRevealRatio: 0.82,
+				introPaddingTop: 60,
+				introPaddingX: 30,
+				introCardPadding: "24px 30px",
+				ctaWrapperPaddingX: 32,
+				ctaWrapperPaddingY: 36,
+				ctaPanelPadding: "28px 32px",
+				ctaMaxWidth: 780,
+				ctaCols: 3,
+				ctaGap: 18,
+				layerOffsets: withLayerOffsets({
+					"/assets/title-screen/Mountain_range.png": 0.57,
+					"/assets/title-screen/River.png": 0.61,
+					"/assets/title-screen/Gravestones.png": 0.64,
+					"/assets/title-screen/Torii_gate.png": 0.6,
+				}),
+			}
+		}
+
+		return base
+	}, [viewport.w, viewport.h])
+
+	const {
+		scrollPages,
+		introFraction,
+		layerOffsets: responsiveLayerOffsets,
+		introPaddingTop,
+		introPaddingX,
+		introCardPadding,
+		introMaxWidth,
+		ctaRevealRatio,
+		ctaWrapperPaddingX,
+		ctaWrapperPaddingY,
+		ctaPanelPadding,
+		ctaMaxWidth,
+		ctaCols,
+		ctaGap,
+	} = responsive
 
 	useEffect(() => {
 		const onResize = () => setViewport({ w: window.innerWidth, h: window.innerHeight })
@@ -75,18 +219,19 @@ function ParallaxScene() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [layers.map(l => l.src).join(","), baseSize.w, baseSize.h])
 	const sectionHeight = useMemo(() => {
-		// Shorter overall scroll: ~3.2 pages + reveal distance
-		const scrollPages = 3.2
 		return Math.round((viewport.h || 600) * scrollPages + backdropTravel)
-	}, [viewport.h, backdropTravel])
+	}, [viewport.h, backdropTravel, scrollPages])
 
 	// Each layer starts at the image top (y=0) and moves up to reveal the bottom
 	// (y = -backdropTravel). We keep parallax by using different curve exponents.
 
 	// Reserve a small portion of the timeline for the studio intro before step 1
-	const introFraction = 0.1
-	// Compute when the final CTA should appear (last fifth of the scroll after intro)
-	const finalStart = introFraction + (4 / 5) * (1 - introFraction)
+	// (adjusted dynamically for extreme aspect ratios).
+	// CTA timings also adapt per-breakpoint so short scrolls still get an early reveal.
+	const ctaFullFraction = introFraction + ctaRevealRatio * (1 - introFraction)
+	const ctaFadeWindow = 0.12
+	const ctaFadeStart = Math.max(introFraction + 0.02, ctaFullFraction - ctaFadeWindow)
+	const finalStart = Math.min(ctaFullFraction, 0.99)
 
 	return (
 		<section
@@ -101,7 +246,7 @@ function ParallaxScene() {
 					const curved = useTransform(scrollYProgress, (v) =>
 						Math.pow(Math.min(1, Math.max(0, v)), layer.power)
 					)
-					const startOffset = (layer.offsetVH || 0) * (viewport.h || 0)
+					const startOffset = (responsiveLayerOffsets[layer.src] ?? layer.offsetVH ?? 0) * (viewport.h || 0)
 					const y = useTransform(curved, [0, 1], [startOffset, -backdropTravel])
 					const natural = imageSizes[layer.src] || baseSize
 					const displayedW = natural.w * pixelScale
@@ -134,12 +279,17 @@ function ParallaxScene() {
 					const y = useTransform(scrollYProgress, [0, introFraction], [20, -10])
 					return (
 						<motion.div
-							className="absolute inset-0 z-[95] flex items-start justify-center pt-10 px-6"
-							style={{ opacity }}
+							className="absolute inset-0 z-[95] flex items-start justify-center"
+							style={{
+								opacity,
+								paddingTop: introPaddingTop,
+								paddingLeft: introPaddingX,
+								paddingRight: introPaddingX,
+							}}
 						>
 							<motion.div
-								className="bg-black/55 border-4 border-gray-700 rounded-lg max-w-md w-full px-6 py-5 text-center"
-								style={{ y }}
+								className="bg-black/55 border-4 border-gray-700 rounded-lg w-full text-center"
+								style={{ y, maxWidth: introMaxWidth, padding: introCardPadding }}
 							>
 								<img
 									src="/assets/title-screen/asphodel.png"
@@ -156,16 +306,22 @@ function ParallaxScene() {
 				})()}
 				{/* Final CTA only, 100% opacity (shows in last segment) */}
 				{(() => {
-					const opacity = useTransform(scrollYProgress, (v) => (v >= finalStart ? 1 : 0))
-					const y = useTransform(scrollYProgress, [finalStart, 1], [30, -10])
+					const opacity = useTransform(scrollYProgress, [ctaFadeStart, finalStart], [0, 1])
+					const y = useTransform(scrollYProgress, [ctaFadeStart, 1], [40, -10])
 					return (
 						<motion.div
-							className="absolute inset-0 z-[90] flex items-center justify-center px-6"
-							style={{ opacity }}
+							className="absolute inset-0 z-[90] flex items-center justify-center"
+							style={{
+								opacity,
+								paddingLeft: ctaWrapperPaddingX,
+								paddingRight: ctaWrapperPaddingX,
+								paddingTop: ctaWrapperPaddingY,
+								paddingBottom: ctaWrapperPaddingY,
+							}}
 						>
 							<motion.div
-								className="bg-black border-4 border-gray-700 rounded-lg max-w-xl w-full px-6 py-6 text-center"
-								style={{ y }}
+								className="bg-black border-4 border-gray-700 rounded-lg w-full text-center"
+								style={{ y, maxWidth: ctaMaxWidth, padding: ctaPanelPadding }}
 							>
 								<h2 className="text-white text-2xl leading-relaxed font-pixel tracking-wide mb-4">
 									Let's Begin.
@@ -173,7 +329,13 @@ function ParallaxScene() {
 								<p className="text-indigo-100 text-sm leading-7">
 									Your next chapter begins here.
 								</p>
-								<div className="mt-8 grid grid-cols-2 gap-4">
+								<div
+									className="mt-8 grid w-full"
+									style={{
+										gap: `${ctaGap}px`,
+										gridTemplateColumns: `repeat(${ctaCols}, minmax(0, 1fr))`,
+									}}
+								>
 									<a href="#start" className="pixel-button bg-gray-800 rounded-lg border-2 border-teal-500 hover:bg-gray-700 text-center py-3">
 										Begin
 									</a>
