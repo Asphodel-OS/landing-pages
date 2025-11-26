@@ -361,10 +361,10 @@ function ParallaxScene() {
 											gridTemplateColumns: `repeat(${ctaCols}, minmax(0, 1fr))`,
 										}}
 									>
-										<RetroButton as="a" href="#start" className="text-center">
+										<RetroButton as="a" href="https://app.kamigotchi.io/" className="text-center">
 											Start New Game
 										</RetroButton>
-										<RetroButton as="a" href="#explore" variant="secondary" className="text-center text-white">
+										<RetroButton as="a" href="/memegen" variant="secondary" className="text-center text-white">
 											Meme Generator
 										</RetroButton>
 										<RetroButton
@@ -377,7 +377,7 @@ function ParallaxScene() {
 										>
 											SudoSwap
 										</RetroButton>
-										<RetroButton as="a" href="#about" variant="blue" className="text-center text-white">
+										<RetroButton as="a" href="/leaderboard" variant="blue" className="text-center text-white">
 											Stats
 										</RetroButton>
 									</div>
