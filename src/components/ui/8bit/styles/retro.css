@@ -68,7 +68,7 @@
 	letter-spacing: 0.2em;
 	border: none;
 	cursor: pointer;
-	transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+	transition: box-shadow 180ms ease, filter 180ms ease;
 	box-shadow:
 		0 6px 0 #050714,
 		0 8px 18px rgba(5, 7, 20, 0.65);
@@ -90,19 +90,23 @@
 	border: 2px solid rgba(255, 255, 255, 0.16);
 }
 
-.retro-button:hover {
-	transform: translateY(-2px);
+.retro-button:hover,
+.retro-button:focus-visible {
 	box-shadow:
 		0 8px 0 #050714,
-		0 10px 24px rgba(5, 7, 20, 0.68);
-	filter: brightness(1.02);
+		0 12px 26px rgba(5, 7, 20, 0.72);
+	filter: saturate(1.08);
 }
 
 .retro-button:active {
-	transform: translateY(3px);
 	box-shadow:
 		0 3px 0 #050714,
 		0 6px 18px rgba(5, 7, 20, 0.6);
+}
+
+.retro-button:focus-visible {
+	outline: 2px solid rgba(94, 234, 212, 0.7);
+	outline-offset: 6px;
 }
 
 .retro-button-primary {

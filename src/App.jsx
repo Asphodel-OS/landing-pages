@@ -251,7 +251,7 @@ function ParallaxScene() {
 		<section
 			ref={containerRef}
 			className="relative bg-[#0b0d26]"
-			style={{ height: `${sectionHeight}px` }}
+			style={{ height: `${sectionHeight}px`, position: "relative" }}
 		>
 			<div className="sticky top-0 h-screen w-full overflow-hidden">
 				{layers.map((layer) => {
@@ -302,6 +302,7 @@ function ParallaxScene() {
 								paddingTop: introPaddingTop,
 								paddingLeft: introPaddingX,
 								paddingRight: introPaddingX,
+								pointerEvents: "none",
 							}}
 						>
 							<motion.div style={{ y, maxWidth: introMaxWidth, width: "100%" }}>
