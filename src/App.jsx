@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
+import { RetroPanel, RetroRibbon, RetroButton } from "@/components/ui/8bit/RetroElements"
 
 const layers = [
 	// Parallax via curve exponents:
@@ -303,24 +304,18 @@ function ParallaxScene() {
 								paddingRight: introPaddingX,
 							}}
 						>
-							<motion.div
-								className="relative rounded-2xl border-4 border-gray-700 w-full text-center overflow-hidden shadow-[0_0_40px_rgba(11,21,56,0.65)]"
-								style={{ y, maxWidth: introMaxWidth, padding: introCardPadding }}
-							>
-								<div className="absolute inset-0 bg-gradient-to-b from-[#141b46]/90 via-[#0c102d]/95 to-[#050714] pointer-events-none" />
-								<div className="absolute inset-0 rounded-[18px] border border-white/5 pointer-events-none" />
-								<div className="relative z-10 flex flex-col items-center">
+							<motion.div style={{ y, maxWidth: introMaxWidth, width: "100%" }}>
+								<RetroPanel className="flex flex-col items-center gap-5" style={{ padding: introCardPadding }}>
 									<img
 										src="/assets/title-screen/asphodel.png"
 										alt="Asphdel Studios"
-										className="h-14 object-contain mx-auto mt-5 mb-4 drop-shadow-[0_4px_0_rgba(6,9,24,0.8)]"
+										className="h-14 object-contain mx-auto drop-shadow-[0_4px_0_rgba(6,9,24,0.8)]"
 										draggable={false}
 									/>
-									<div className="inline-flex items-center gap-2 rounded-full border border-teal-400/50 bg-black/40 px-4 py-2 text-[10px] uppercase tracking-[0.28em] text-teal-200">
-										<span className="h-1.5 w-1.5 rounded-full bg-teal-300 shadow-[0_0_6px_rgba(94,234,212,0.9)]" />
+									<RetroRibbon>
 										<span>Presents</span>
-									</div>
-								</div>
+									</RetroRibbon>
+								</RetroPanel>
 							</motion.div>
 						</motion.div>
 					)
@@ -340,17 +335,11 @@ function ParallaxScene() {
 								paddingBottom: ctaWrapperPaddingY,
 							}}
 						>
-							<motion.div
-								className="relative rounded-2xl border-4 border-gray-700 w-full text-center overflow-hidden shadow-[0_0_40px_rgba(11,21,56,0.65)]"
-								style={{ y, maxWidth: ctaMaxWidth, padding: ctaPanelPadding }}
-							>
-								<div className="absolute inset-0 bg-gradient-to-b from-[#141b46]/90 via-[#0c102d]/95 to-[#050714] pointer-events-none" />
-								<div className="absolute inset-0 rounded-[18px] border border-white/5 pointer-events-none" />
-								<div className="relative z-10 flex flex-col items-center">
-									<div className="inline-flex items-center gap-2 rounded-full border border-teal-400/50 bg-black/40 px-4 py-2 text-[10px] uppercase tracking-[0.28em] text-teal-200">
-										<span className="h-1.5 w-1.5 rounded-full bg-teal-300 shadow-[0_0_6px_rgba(94,234,212,0.9)]" />
+							<motion.div style={{ y, maxWidth: ctaMaxWidth, width: "100%" }}>
+								<RetroPanel className="flex flex-col items-center" style={{ padding: ctaPanelPadding }}>
+									<RetroRibbon>
 										<span>Welcome</span>
-									</div>
+									</RetroRibbon>
 									<h2 className="text-white text-3xl leading-relaxed font-pixel tracking-wide mt-6 mb-4 drop-shadow-[0_4px_0_rgba(6,9,24,0.8)]">
 										Let's Begin.
 									</h2>
@@ -364,34 +353,27 @@ function ParallaxScene() {
 											gridTemplateColumns: `repeat(${ctaCols}, minmax(0, 1fr))`,
 										}}
 									>
-										<a
-											href="#start"
-											className="pixel-button bg-gradient-to-b from-teal-500 to-teal-700 rounded-lg border-2 border-teal-300/80 hover:brightness-110 text-center py-3 text-[#050714]"
-										>
+										<RetroButton as="a" href="#start" className="text-center">
 											Start New Game
-										</a>
-										<a
-											href="#explore"
-											className="pixel-button bg-gray-900/90 rounded-lg border-2 border-teal-500/70 hover:bg-gray-800 text-center py-3"
-										>
+										</RetroButton>
+										<RetroButton as="a" href="#explore" variant="secondary" className="text-center text-white">
 											Meme Generator
-										</a>
-										<a
+										</RetroButton>
+										<RetroButton
+											as="a"
 											href="https://sudoswap.xyz/"
 											target="_blank"
 											rel="noreferrer"
-											className="pixel-button bg-gray-900/90 rounded-lg border-2 border-violet-500/80 hover:bg-gray-800 text-center py-3"
+											variant="violet"
+											className="text-center text-white"
 										>
 											SudoSwap
-										</a>
-										<a
-											href="#about"
-											className="pixel-button bg-gray-900/90 rounded-lg border-2 border-blue-500/80 hover:bg-gray-800 text-center py-3"
-										>
+										</RetroButton>
+										<RetroButton as="a" href="#about" variant="blue" className="text-center text-white">
 											Stats
-										</a>
+										</RetroButton>
 									</div>
-								</div>
+								</RetroPanel>
 							</motion.div>
 						</motion.div>
 					)
