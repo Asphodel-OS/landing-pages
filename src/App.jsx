@@ -49,6 +49,7 @@ function ParallaxScene() {
 			scrollPages: 3.2,
 			introFraction: 0.1,
 			layerOffsets: withLayerOffsets(),
+			introDisplayMultiplier: 2,
 			introDelayFraction: 0.018,
 			ctaRevealRatio: 0.75,
 			introPaddingTop: 48,
@@ -63,7 +64,7 @@ function ParallaxScene() {
 			ctaGap: 16,
 		}
 
-		if (w <= 480 || h <= 640) {
+		if (w <= 600) {
 			return {
 				...base,
 				scrollPages: 2.3,
@@ -89,7 +90,7 @@ function ParallaxScene() {
 			}
 		}
 
-		if (w <= 768 || h <= 820) {
+		if (w <= 900) {
 			return {
 				...base,
 				scrollPages: 2.6,
@@ -104,7 +105,7 @@ function ParallaxScene() {
 				ctaWrapperPaddingY: 26,
 				ctaPanelPadding: "22px 22px",
 				ctaMaxWidth: 440,
-				ctaCols: 1,
+				ctaCols: 2,
 				ctaGap: 14,
 				layerOffsets: withLayerOffsets({
 					"/assets/title-screen/Mountain_range.png": 0.48,
@@ -150,7 +151,7 @@ function ParallaxScene() {
 				ctaWrapperPaddingY: 36,
 				ctaPanelPadding: "28px 32px",
 				ctaMaxWidth: 780,
-				ctaCols: 3,
+				ctaCols: 2,
 				ctaGap: 18,
 				layerOffsets: withLayerOffsets({
 					"/assets/title-screen/Mountain_range.png": 0.57,
@@ -169,6 +170,7 @@ function ParallaxScene() {
 		introFraction,
 		layerOffsets: responsiveLayerOffsets,
 		introDelayFraction,
+		introDisplayMultiplier,
 		introPaddingTop,
 		introPaddingX,
 		introCardPadding,
@@ -231,6 +233,18 @@ function ParallaxScene() {
 		return Math.round((viewport.h || 600) * scrollPages + backdropTravel)
 	}, [viewport.h, backdropTravel, scrollPages])
 
+	const introTimings = useMemo(() => {
+		const latestIntroStart = Math.max(0, introFraction - 0.01)
+		const introStart = Math.min(introDelayFraction, latestIntroStart)
+		const baseSpan = Math.max(0.001, introFraction - introStart)
+		const multiplier = Math.max(1, introDisplayMultiplier || 1)
+		const effectiveSpan = Math.min(baseSpan * multiplier, 0.55)
+		const fadeInEnd = introStart + effectiveSpan * 0.35
+		const holdEnd = introStart + effectiveSpan * 0.8
+		const introEnd = Math.min(introStart + effectiveSpan, 0.92)
+		return { introStart, fadeInEnd, holdEnd, introEnd }
+	}, [introFraction, introDelayFraction, introDisplayMultiplier])
+
 	// Each layer starts at the image top (y=0) and moves up to reveal the bottom
 	// (y = -backdropTravel). We keep parallax by using different curve exponents.
 
@@ -244,7 +258,8 @@ function ParallaxScene() {
 	const normalizedCtaRatio = clamp(ctaRevealRatio + ctaRatioBoost, 0.5, 0.88)
 	const ctaFullFraction = introFraction + normalizedCtaRatio * (1 - introFraction)
 	const ctaFadeWindow = clamp((1 - normalizedCtaRatio) * 0.55, 0.08, 0.2)
-	const ctaFadeStart = clamp(ctaFullFraction - ctaFadeWindow, introFraction + 0.015, 0.98)
+	const minCtaStart = Math.min(introTimings.introEnd + 0.02, 0.96)
+	const ctaFadeStart = clamp(ctaFullFraction - ctaFadeWindow, Math.max(introFraction + 0.015, minCtaStart), 0.98)
 	const finalStart = Math.min(ctaFullFraction, 0.985)
 
 	return (
@@ -283,17 +298,12 @@ function ParallaxScene() {
 				})}
 				{/* Intro overlay: Asphodel Studios presents */}
 				{(() => {
-					const latestIntroStart = Math.max(0, introFraction - 0.01)
-					const introStart = Math.min(introDelayFraction, latestIntroStart)
-					const introSpan = Math.max(0.001, introFraction - introStart)
-					const fadeInEnd = introStart + introSpan * 0.4
-					const holdEnd = introStart + introSpan * 0.85
 					const opacity = useTransform(
 						scrollYProgress,
-						[0, introStart, fadeInEnd, holdEnd, introFraction],
+						[0, introTimings.introStart, introTimings.fadeInEnd, introTimings.holdEnd, introTimings.introEnd],
 						[0, 0, 1, 1, 0]
 					)
-					const y = useTransform(scrollYProgress, [introStart, introFraction], [20, -10])
+					const y = useTransform(scrollYProgress, [introTimings.introStart, introTimings.introEnd], [20, -10])
 					return (
 						<motion.div
 							className="absolute inset-0 z-[95] flex items-start justify-center"
