@@ -337,9 +337,6 @@ function ParallaxScene() {
 						>
 							<motion.div style={{ y, maxWidth: ctaMaxWidth, width: "100%" }}>
 								<RetroPanel className="flex flex-col items-center" style={{ padding: ctaPanelPadding }}>
-									<RetroRibbon>
-										<span>Welcome</span>
-									</RetroRibbon>
 									<h2 className="text-white text-3xl leading-relaxed font-pixel tracking-wide mt-6 mb-4 drop-shadow-[0_4px_0_rgba(6,9,24,0.8)]">
 										Let's Begin.
 									</h2>

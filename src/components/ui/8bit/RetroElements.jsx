@@ -20,10 +20,10 @@ export function RetroRibbon({ children, className, dotClassName, ...props }) {
 }
 
 const buttonVariants = {
-	primary: "retro-button bg-gradient-to-b from-teal-400 to-teal-600 text-[#050714]",
-	secondary: "retro-button bg-gradient-to-b from-[#262b59] to-[#131735] text-white",
-	violet: "retro-button bg-gradient-to-b from-[#a855f7] to-[#6b21a8] text-white",
-	blue: "retro-button bg-gradient-to-b from-[#60a5fa] to-[#1d4ed8] text-white",
+	primary: "retro-button retro-button-primary",
+	secondary: "retro-button retro-button-secondary",
+	violet: "retro-button retro-button-violet",
+	blue: "retro-button retro-button-blue",
 }
 
 export function RetroButton({ children, variant = "primary", className, as = "button", ...props }) {
