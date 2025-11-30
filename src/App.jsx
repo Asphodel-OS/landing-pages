@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import { RetroPanel, RetroRibbon, RetroButton } from "@/components/ui/8bit/RetroElements"
+import { KamiCreator } from "./components/KamiCreator/KamiCreator"
 
 const layers = [
 	// Parallax via curve exponents:
@@ -41,6 +42,7 @@ function ParallaxScene() {
 	const [baseSize, setBaseSize] = useState({ w: 0, h: 0 })
 	const [pixelScale, setPixelScale] = useState(1)
 	const [imageSizes, setImageSizes] = useState({})
+    const [showKamiCreator, setShowKamiCreator] = useState(false)
 
 	const responsive = useMemo(() => {
 		const w = viewport.w || 1440
@@ -364,7 +366,7 @@ function ParallaxScene() {
 										<RetroButton as="a" href="#start" className="text-center">
 											Start New Game
 										</RetroButton>
-										<RetroButton as="a" href="#explore" variant="secondary" className="text-center text-white">
+										<RetroButton onClick={() => setShowKamiCreator(true)} variant="secondary" className="text-center text-white">
 											Meme Generator
 										</RetroButton>
 										<RetroButton
@@ -387,6 +389,11 @@ function ParallaxScene() {
 					)
 				})()}
 			</div>
+            {showKamiCreator && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 9999 }}>
+                    <KamiCreator onClose={() => setShowKamiCreator(false)} />
+                </div>
+            )}
 		</section>
 	)
 }
