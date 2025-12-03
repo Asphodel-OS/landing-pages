@@ -16,6 +16,8 @@ body {
 	background: var(--page-bg);
 	margin: 0;
 	font-family: "Press Start 2P", cursive;
+	/* Prevent bounce scroll from exposing parallax edges on extreme scroll */
+	overscroll-behavior: none;
 }
 
 .pixel-button {

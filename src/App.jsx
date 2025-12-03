@@ -261,6 +261,20 @@ function ParallaxScene() {
 	const minCtaStart = Math.min(introTimings.introEnd + 0.02, 0.96)
 	const ctaFadeStart = clamp(ctaFullFraction - ctaFadeWindow, Math.max(introFraction + 0.015, minCtaStart), 0.98)
 	const finalStart = Math.min(ctaFullFraction, 0.985)
+	const midLogoTimings = useMemo(() => {
+		const start = Math.min(introTimings.introEnd + 0.02, 0.5)
+		const holdCandidate = Math.min(start + 0.22, ctaFadeStart - 0.05)
+		const hold = holdCandidate > start ? holdCandidate : start + 0.06
+		const endCandidate = Math.min(hold + 0.12, finalStart - 0.02)
+		const end = endCandidate > hold ? endCandidate : hold + 0.02
+		return { start, hold, end }
+	}, [introTimings.introEnd, ctaFadeStart, finalStart])
+	const midLogoY = useMemo(() => Math.min((viewport.h || 780) * 0.18, 220), [viewport.h])
+	const finalLogoY = useMemo(() => {
+		const vh = viewport.h || 780
+		const dynamicLift = Math.min(vh * 0.74, 660)
+		return -Math.max(dynamicLift, 240)
+	}, [viewport.h])
 
 	return (
 		<section
@@ -327,6 +341,33 @@ function ParallaxScene() {
 										<span>Presents</span>
 									</RetroRibbon>
 								</RetroPanel>
+							</motion.div>
+						</motion.div>
+					)
+				})()}
+				{/* Mid logo hero */}
+				{(() => {
+					const opacity = useTransform(
+						scrollYProgress,
+						[midLogoTimings.start, midLogoTimings.hold],
+						[0, 1]
+					)
+					const y = useTransform(
+						scrollYProgress,
+						[midLogoTimings.start, midLogoTimings.hold, ctaFadeStart, 1],
+						[-80, midLogoY, midLogoY, finalLogoY]
+					)
+					return (
+						<motion.div
+							className="absolute inset-0 z-[92] flex items-center justify-center pointer-events-none"
+							style={{ opacity }}
+						>
+							<motion.div style={{ y, width: "100%", maxWidth: 620, padding: "0 24px" }}>
+								<div className="flex flex-col items-center">
+									<p className="retro text-white text-[clamp(2.4rem,4.8vw,4.4rem)] tracking-[0.35em] leading-[1.35] drop-shadow-[0_6px_0_rgba(5,7,20,0.85)] px-4 py-2">
+										Kamigotchi
+									</p>
+								</div>
 							</motion.div>
 						</motion.div>
 					)
