@@ -10,13 +10,17 @@ html,
 body,
 #root {
 	height: 100%;
+	background: var(--page-bg);
+}
+
+html {
+	/* Clamp the viewport scroll container so rubber-band scrolling can't reveal gaps */
+	overscroll-behavior: none;
 }
 
 body {
-	background: var(--page-bg);
 	margin: 0;
 	font-family: "Press Start 2P", cursive;
-	/* Prevent bounce scroll from exposing parallax edges on extreme scroll */
 	overscroll-behavior: none;
 }
 
