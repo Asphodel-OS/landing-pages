@@ -40,6 +40,7 @@ function ParallaxScene() {
 	const [backdropTravel, setBackdropTravel] = useState(300) // fallback travel
 	const [baseSize, setBaseSize] = useState({ w: 0, h: 0 })
 	const [pixelScale, setPixelScale] = useState(1)
+	const [zoomScale, setZoomScale] = useState(1)
 	const [imageSizes, setImageSizes] = useState({})
 
 	const responsive = useMemo(() => {
@@ -191,6 +192,18 @@ function ParallaxScene() {
 		return () => window.removeEventListener("resize", onResize)
 	}, [])
 
+	useEffect(() => {
+		if (typeof window === "undefined" || !window.visualViewport) return undefined
+		const updateZoom = () => setZoomScale(window.visualViewport?.scale || 1)
+		updateZoom()
+		window.visualViewport.addEventListener("resize", updateZoom)
+		window.visualViewport.addEventListener("scroll", updateZoom)
+		return () => {
+			window.visualViewport?.removeEventListener("resize", updateZoom)
+			window.visualViewport?.removeEventListener("scroll", updateZoom)
+		}
+	}, [])
+
 	// Measure natural size and compute integer pixel scale + travel
 	useEffect(() => {
 		const img = new Image()
@@ -229,9 +242,15 @@ function ParallaxScene() {
 		})
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [layers.map(l => l.src).join(","), baseSize.w, baseSize.h])
+	const effectiveViewportHeight = useMemo(() => {
+		const base = viewport.h || 600
+		const scale = Math.max(1, zoomScale || 1)
+		return base * scale
+	}, [viewport.h, zoomScale])
+
 	const sectionHeight = useMemo(() => {
-		return Math.round((viewport.h || 600) * scrollPages + backdropTravel)
-	}, [viewport.h, backdropTravel, scrollPages])
+		return Math.round(effectiveViewportHeight * scrollPages + backdropTravel)
+	}, [effectiveViewportHeight, backdropTravel, scrollPages])
 
 	const introTimings = useMemo(() => {
 		const latestIntroStart = Math.max(0, introFraction - 0.01)
@@ -252,7 +271,7 @@ function ParallaxScene() {
 	// (adjusted dynamically for extreme aspect ratios).
 	// CTA timings also adapt per-breakpoint so short scrolls still get an early reveal.
 	const viewportHeight = viewport.h || 1
-	const scrollScreens = scrollPages + backdropTravel / Math.max(1, viewportHeight)
+	const scrollScreens = scrollPages + backdropTravel / Math.max(1, effectiveViewportHeight)
 	const ctaRatioBoost =
 		scrollScreens <= 2.4 ? -0.12 : scrollScreens <= 2.9 ? -0.07 : scrollScreens >= 3.6 ? 0.02 : 0
 	const normalizedCtaRatio = clamp(ctaRevealRatio + ctaRatioBoost, 0.5, 0.88)
