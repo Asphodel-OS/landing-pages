@@ -27,6 +27,7 @@ const withLayerOffsets = (overrides = {}) => ({
 })
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+const PRESENTS_HOLD_MULTIPLIER = 3
 
 function ParallaxScene() {
 	const containerRef = useRef(null)
@@ -42,6 +43,7 @@ function ParallaxScene() {
 	const [pixelScale, setPixelScale] = useState(1)
 	const [zoomScale, setZoomScale] = useState(1)
 	const [imageSizes, setImageSizes] = useState({})
+	const [rawOverflow, setRawOverflow] = useState(0)
 
 	const responsive = useMemo(() => {
 		const w = viewport.w || 1440
@@ -63,6 +65,9 @@ function ParallaxScene() {
 			ctaMaxWidth: 640,
 			ctaCols: 2,
 			ctaGap: 16,
+			logoRatio: 0.18,
+			logoMaxWidth: 620,
+			logoPaddingX: 24,
 		}
 
 		if (w <= 600) {
@@ -82,6 +87,9 @@ function ParallaxScene() {
 				ctaMaxWidth: 340,
 				ctaCols: 1,
 				ctaGap: 12,
+				logoRatio: 0.08,
+				logoMaxWidth: 360,
+				logoPaddingX: 12,
 				layerOffsets: withLayerOffsets({
 					"/assets/title-screen/Mountain_range.png": 0.44,
 					"/assets/title-screen/River.png": 0.48,
@@ -108,6 +116,9 @@ function ParallaxScene() {
 				ctaMaxWidth: 440,
 				ctaCols: 2,
 				ctaGap: 14,
+				logoRatio: 0.16,
+				logoMaxWidth: 520,
+				logoPaddingX: 18,
 				layerOffsets: withLayerOffsets({
 					"/assets/title-screen/Mountain_range.png": 0.48,
 					"/assets/title-screen/River.png": 0.52,
@@ -130,11 +141,14 @@ function ParallaxScene() {
 				ctaPanelPadding: "24px 26px",
 				ctaMaxWidth: 560,
 				layerOffsets: withLayerOffsets({
-					"/assets/title-screen/Mountain_range.png": 0.52,
-					"/assets/title-screen/River.png": 0.55,
+					"/assets/title-screen/Mountain_range.png": 0.72,
+					"/assets/title-screen/River.png": 0.75,
 					"/assets/title-screen/Gravestones.png": 0.58,
 					"/assets/title-screen/Torii_gate.png": 0.54,
 				}),
+				logoRatio: 0.17,
+				logoMaxWidth: 580,
+				logoPaddingX: 20,
 			}
 		}
 
@@ -154,6 +168,9 @@ function ParallaxScene() {
 				ctaMaxWidth: 780,
 				ctaCols: 2,
 				ctaGap: 18,
+				logoRatio: 0.2,
+				logoMaxWidth: 720,
+				logoPaddingX: 32,
 				layerOffsets: withLayerOffsets({
 					"/assets/title-screen/Mountain_range.png": 0.57,
 					"/assets/title-screen/River.png": 0.61,
@@ -183,6 +200,9 @@ function ParallaxScene() {
 		ctaMaxWidth,
 		ctaCols,
 		ctaGap,
+		logoRatio,
+		logoMaxWidth,
+		logoPaddingX,
 	} = responsive
 
 	useEffect(() => {
@@ -219,6 +239,7 @@ function ParallaxScene() {
 			setPixelScale(intScale)
 			const displayedHeight = img.naturalHeight * intScale
 			const travel = Math.max(0, displayedHeight - viewport.h)
+			setRawOverflow(travel)
 			setBackdropTravel(travel > 0 ? travel : Math.round(viewport.h * 0.25))
 		}
 		if (img.complete) compute()
@@ -247,10 +268,23 @@ function ParallaxScene() {
 		const scale = Math.max(1, zoomScale || 1)
 		return base * scale
 	}, [viewport.h, zoomScale])
+	const viewportHeightPx = viewport.h || 0
 
 	const sectionHeight = useMemo(() => {
 		return Math.round(effectiveViewportHeight * scrollPages + backdropTravel)
 	}, [effectiveViewportHeight, backdropTravel, scrollPages])
+	const isVeryNarrow = viewport.w > 0 && viewport.w <= 600
+
+	const overflowBuffer = viewportHeightPx * 0.18 + Math.max(24, viewportHeightPx * 0.02)
+	const needsTightSpacing = viewportHeightPx > 0 && rawOverflow <= overflowBuffer
+	const spacingScale = needsTightSpacing ? 0.88 : 1
+	const layerOffsetScale = needsTightSpacing ? 0.94 : 1
+	const sceneScale = needsTightSpacing ? 0.94 : 1
+	const introPaddingTopTight = Math.round(introPaddingTop * spacingScale)
+	const introPaddingXTight = Math.round(introPaddingX * spacingScale)
+	const ctaWrapperPaddingXTight = Math.round(ctaWrapperPaddingX * spacingScale)
+	const ctaWrapperPaddingYTight = Math.round(ctaWrapperPaddingY * spacingScale)
+	const ctaGapTight = Math.max(8, Math.round(ctaGap * spacingScale))
 
 	const introTimings = useMemo(() => {
 		const latestIntroStart = Math.max(0, introFraction - 0.01)
@@ -270,7 +304,7 @@ function ParallaxScene() {
 	// Reserve a small portion of the timeline for the studio intro before step 1
 	// (adjusted dynamically for extreme aspect ratios).
 	// CTA timings also adapt per-breakpoint so short scrolls still get an early reveal.
-	const viewportHeight = viewport.h || 1
+	const viewportHeight = viewportHeightPx || 1
 	const scrollScreens = scrollPages + backdropTravel / Math.max(1, effectiveViewportHeight)
 	const ctaRatioBoost =
 		scrollScreens <= 2.4 ? -0.12 : scrollScreens <= 2.9 ? -0.07 : scrollScreens >= 3.6 ? 0.02 : 0
@@ -280,6 +314,20 @@ function ParallaxScene() {
 	const minCtaStart = Math.min(introTimings.introEnd + 0.02, 0.96)
 	const ctaFadeStart = clamp(ctaFullFraction - ctaFadeWindow, Math.max(introFraction + 0.015, minCtaStart), 0.98)
 	const finalStart = Math.min(ctaFullFraction, 0.985)
+	const presentsTimings = useMemo(() => {
+		const fadeInEnd = introTimings.fadeInEnd
+		const holdSpan = Math.max(0.0001, introTimings.holdEnd - fadeInEnd)
+		const fadeOutSpan = Math.max(0.0001, introTimings.introEnd - introTimings.holdEnd)
+		const safeCtaStart = Number.isFinite(ctaFadeStart) ? ctaFadeStart : 0.97
+		const holdCap = Math.max(fadeInEnd + 0.01, Math.min(safeCtaStart - 0.02, 0.94))
+		const stretchedHoldEnd = Math.min(
+			fadeInEnd + holdSpan * PRESENTS_HOLD_MULTIPLIER,
+			holdCap
+		)
+		const fadeOutCap = Math.max(stretchedHoldEnd + 0.005, Math.min(safeCtaStart - 0.01, 0.965))
+		const stretchedIntroEnd = Math.min(stretchedHoldEnd + fadeOutSpan, fadeOutCap)
+		return { ...introTimings, holdEnd: stretchedHoldEnd, introEnd: stretchedIntroEnd }
+	}, [introTimings, ctaFadeStart])
 	const midLogoTimings = useMemo(() => {
 		const start = Math.min(introTimings.introEnd + 0.02, 0.5)
 		const holdCandidate = Math.min(start + 0.22, ctaFadeStart - 0.05)
@@ -288,12 +336,23 @@ function ParallaxScene() {
 		const end = endCandidate > hold ? endCandidate : hold + 0.02
 		return { start, hold, end }
 	}, [introTimings.introEnd, ctaFadeStart, finalStart])
-	const midLogoY = useMemo(() => Math.min((viewport.h || 780) * 0.18, 220), [viewport.h])
-	const finalLogoY = useMemo(() => {
+	const midLogoBaseY = useMemo(() => Math.min((viewport.h || 780) * logoRatio, 220), [viewport.h, logoRatio])
+	const midLogoY = useMemo(
+		() => {
+			if (isVeryNarrow) return 20
+			return needsTightSpacing ? midLogoBaseY * 0.9 : midLogoBaseY
+		},
+		[midLogoBaseY, needsTightSpacing, isVeryNarrow]
+	)
+	const finalLogoBaseY = useMemo(() => {
 		const vh = viewport.h || 780
 		const dynamicLift = Math.min(vh * 0.74, 660)
 		return -Math.max(dynamicLift, 240)
 	}, [viewport.h])
+	const finalLogoY = useMemo(
+		() => (needsTightSpacing ? finalLogoBaseY * 0.92 : finalLogoBaseY),
+		[finalLogoBaseY, needsTightSpacing]
+	)
 
 	return (
 		<section
@@ -302,49 +361,57 @@ function ParallaxScene() {
 			style={{ height: `${sectionHeight}px`, position: "relative" }}
 		>
 			<div className="sticky top-0 h-screen w-full overflow-hidden">
-				{layers.map((layer) => {
-					// Non-linear per-layer progress to restore strong parallax while
-					// keeping all layers aligned at the end frame.
-					const curved = useTransform(scrollYProgress, (v) =>
-						Math.pow(Math.min(1, Math.max(0, v)), layer.power)
-					)
-					const startOffset = (responsiveLayerOffsets[layer.src] ?? layer.offsetVH ?? 0) * (viewport.h || 0)
-					const y = useTransform(curved, [0, 1], [startOffset, -backdropTravel])
-					const natural = imageSizes[layer.src] || baseSize
-					const displayedW = natural.w * pixelScale
-					const displayedH = natural.h * pixelScale
-					return (
-						<div
-							key={layer.src}
-							className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
-							style={{ zIndex: layer.z, width: displayedW, height: displayedH }}
-						>
-							<motion.img
-								src={layer.src}
-								alt=""
-								className="pixel-image block w-full h-full"
-								style={{ y }}
-								draggable={false}
-							/>
-						</div>
-					)
-				})}
+				<div
+					className="relative h-full w-full"
+					style={{
+						transform: `scale(${sceneScale})`,
+						transformOrigin: "center",
+					}}
+				>
+					{layers.map((layer) => {
+						// Non-linear per-layer progress to restore strong parallax while
+						// keeping all layers aligned at the end frame.
+						const curved = useTransform(scrollYProgress, (v) =>
+							Math.pow(Math.min(1, Math.max(0, v)), layer.power)
+						)
+						const baseOffset = (responsiveLayerOffsets[layer.src] ?? layer.offsetVH ?? 0) * (viewport.h || 0)
+						const startOffset = baseOffset * layerOffsetScale
+						const y = useTransform(curved, [0, 1], [startOffset, -backdropTravel])
+						const natural = imageSizes[layer.src] || baseSize
+						const displayedW = natural.w * pixelScale
+						const displayedH = natural.h * pixelScale
+						return (
+							<div
+								key={layer.src}
+								className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
+								style={{ zIndex: layer.z, width: displayedW, height: displayedH }}
+							>
+								<motion.img
+									src={layer.src}
+									alt=""
+									className="pixel-image block w-full h-full"
+									style={{ y }}
+									draggable={false}
+								/>
+							</div>
+						)
+					})}
 				{/* Intro overlay: Asphodel Studios presents */}
 				{(() => {
 					const opacity = useTransform(
 						scrollYProgress,
-						[0, introTimings.introStart, introTimings.fadeInEnd, introTimings.holdEnd, introTimings.introEnd],
+						[0, presentsTimings.introStart, presentsTimings.fadeInEnd, presentsTimings.holdEnd, presentsTimings.introEnd],
 						[0, 0, 1, 1, 0]
 					)
-					const y = useTransform(scrollYProgress, [introTimings.introStart, introTimings.introEnd], [20, -10])
+					const y = useTransform(scrollYProgress, [presentsTimings.introStart, presentsTimings.introEnd], [20, -10])
 					return (
 						<motion.div
 							className="absolute inset-0 z-[95] flex items-start justify-center"
 							style={{
 								opacity,
-								paddingTop: introPaddingTop,
-								paddingLeft: introPaddingX,
-								paddingRight: introPaddingX,
+								paddingTop: introPaddingTopTight,
+								paddingLeft: introPaddingXTight,
+								paddingRight: introPaddingXTight,
 								pointerEvents: "none",
 							}}
 						>
@@ -378,10 +445,10 @@ function ParallaxScene() {
 					)
 					return (
 						<motion.div
-							className="absolute inset-0 z-[92] flex items-center justify-center pointer-events-none"
+							className={`absolute inset-0 z-[92] flex ${isVeryNarrow ? "items-start" : "items-center"} justify-center pointer-events-none`}
 							style={{ opacity }}
 						>
-							<motion.div style={{ y, width: "100%", maxWidth: 620, padding: "0 24px" }}>
+							<motion.div style={{ y, width: "100%", maxWidth: logoMaxWidth, padding: `0 ${logoPaddingX}px` }}>
 								<div className="flex flex-col items-center">
 									<p className="retro text-white text-[clamp(2.4rem,4.8vw,4.4rem)] tracking-[0.35em] leading-[1.35] drop-shadow-[0_6px_0_rgba(5,7,20,0.85)] px-4 py-2">
 										Kamigotchi
@@ -400,10 +467,10 @@ function ParallaxScene() {
 							className="absolute inset-0 z-[90] flex items-center justify-center"
 							style={{
 								opacity,
-								paddingLeft: ctaWrapperPaddingX,
-								paddingRight: ctaWrapperPaddingX,
-								paddingTop: ctaWrapperPaddingY,
-								paddingBottom: ctaWrapperPaddingY,
+								paddingLeft: ctaWrapperPaddingXTight,
+								paddingRight: ctaWrapperPaddingXTight,
+								paddingTop: ctaWrapperPaddingYTight,
+								paddingBottom: ctaWrapperPaddingYTight,
 							}}
 						>
 							<motion.div style={{ y, maxWidth: ctaMaxWidth, width: "100%" }}>
@@ -417,7 +484,7 @@ function ParallaxScene() {
 									<div
 										className="mt-8 grid w-full"
 										style={{
-											gap: `${ctaGap}px`,
+											gap: `${ctaGapTight}px`,
 											gridTemplateColumns: `repeat(${ctaCols}, minmax(0, 1fr))`,
 										}}
 									>
@@ -446,6 +513,7 @@ function ParallaxScene() {
 						</motion.div>
 					)
 				})()}
+				</div>
 			</div>
 		</section>
 	)
