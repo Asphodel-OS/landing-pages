@@ -143,12 +143,40 @@ function ParallaxScene() {
 				layerOffsets: withLayerOffsets({
 					"/assets/title-screen/Mountain_range.png": 0.72,
 					"/assets/title-screen/River.png": 0.75,
-					"/assets/title-screen/Gravestones.png": 0.58,
+					"/assets/title-screen/Gravestones.png": 0.68,
 					"/assets/title-screen/Torii_gate.png": 0.54,
 				}),
 				logoRatio: 0.17,
 				logoMaxWidth: 580,
 				logoPaddingX: 20,
+			}
+		}
+
+		if (w >= 2200) {
+			return {
+				...base,
+				scrollPages: 3.8,
+				introFraction: 0.085,
+				introDelayFraction: 0.035,
+				ctaRevealRatio: 0.78,
+				introPaddingTop: 72,
+				introPaddingX: 36,
+				introCardPadding: "26px 34px",
+				ctaWrapperPaddingX: 40,
+				ctaWrapperPaddingY: 44,
+				ctaPanelPadding: "30px 36px",
+				ctaMaxWidth: 820,
+				ctaCols: 2,
+				ctaGap: 20,
+				logoRatio: 0.22,
+				logoMaxWidth: 840,
+				logoPaddingX: 36,
+				layerOffsets: withLayerOffsets({
+					"/assets/title-screen/Mountain_range.png": 0.65,
+					"/assets/title-screen/River.png": 0.68,
+					"/assets/title-screen/Gravestones.png": 0.7,
+					"/assets/title-screen/Torii_gate.png": 0.66,
+				}),
 			}
 		}
 
