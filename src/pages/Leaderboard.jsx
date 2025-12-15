@@ -212,9 +212,6 @@ const Leaderboard = () => {
         )}
       </div>
       
-      <div className="mt-6 text-center text-xs text-gray-500">
-        <p>Rankings update every hour • Last season winners are marked with ⭐</p>
-      </div>
     </div>
   );
 };
