@@ -10,8 +10,12 @@ export function getClient(): KamidenServiceClient | null {
   // if (!import.meta.env.VITE_KAMIGAZE_URL) return Client; // null when kamigaze url is not set
 
   if (!Client) {
+    // Use local proxy if in production to avoid CORS, or direct URL if VITE_KAMIGAZE_URL is set (dev/local)
+    // When running on Vercel, we need to go through the rewrite to bypass browser CORS restrictions
+    const baseUrl = import.meta.env.VITE_KAMIGAZE_URL || (import.meta.env.PROD ? '/api/proxy' : 'https://api.prod.kamigotchi.io');
+    
     const channel = createChannel(
-      import.meta.env.VITE_KAMIGAZE_URL || 'https://api.prod.kamigotchi.io',
+      baseUrl,
     );
     Client = createClient(KamidenServiceDefinition, channel);
 
