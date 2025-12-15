@@ -402,6 +402,7 @@ const Select = styled.select`
   border: 3px solid black;
   border-radius: 5px;
   background: white;
+  color: black;
   outline: none;
   cursor: pointer;
   box-shadow: 3px 3px 0 rgba(0,0,0,0.2);

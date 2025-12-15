@@ -32,6 +32,11 @@ body {
 	text-transform: uppercase;
 	cursor: pointer;
 	image-rendering: pixelated;
+	transition: all 0.1s;
+}
+
+.pixel-button:active {
+	transform: translateY(2px);
 }
 
 .pixel-image {
@@ -44,4 +49,52 @@ body {
 	-ms-interpolation-mode: nearest-neighbor;
 }
 
+.pixel-border {
+	box-shadow: 
+		0 0 0 2px #000000,
+		0 0 0 4px #ffffff;
+}
 
+.tab-active {
+	background-color: #4CAF50;
+	color: #000000;
+}
+
+.tab-inactive {
+	background-color: #333333;
+	color: #ffffff;
+}
+
+.tab-inactive:hover {
+	background-color: #555555;
+}
+
+.leaderboard-row:nth-child(odd) {
+	background-color: #222222;
+}
+
+.leaderboard-row:nth-child(even) {
+	background-color: #1a1a1a;
+}
+
+.trophy-gold {
+	color: #FFD700;
+}
+
+.trophy-silver {
+	color: #C0C0C0;
+}
+
+.trophy-bronze {
+	color: #CD7F32;
+}
+
+@keyframes blink {
+	0% { opacity: 1; }
+	50% { opacity: 0.5; }
+	100% { opacity: 1; }
+}
+
+.blink {
+	animation: blink 1s infinite;
+}
