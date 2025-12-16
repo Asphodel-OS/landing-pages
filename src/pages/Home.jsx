@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import { RetroPanel, RetroRibbon, RetroButton } from "@/components/ui/8bit/RetroElements"
 import { KamiCreator } from "../components/KamiCreator/KamiCreator"
+import { animate } from "animejs"
 
 const layers = [
 	// Parallax via curve exponents:
@@ -47,6 +48,8 @@ function ParallaxScene() {
 	const [imageSizes, setImageSizes] = useState({})
 	const [rawOverflow, setRawOverflow] = useState(0)
 	const [showKamiCreator, setShowKamiCreator] = useState(false)
+	const [showScrollHint, setShowScrollHint] = useState(false)
+	const scrollHintRef = useRef(null)
 	const layoutWidth = viewport.w ? Math.min(viewport.w, MAX_SCENE_WIDTH) : 0
 
 	const responsive = useMemo(() => {
@@ -255,6 +258,46 @@ function ParallaxScene() {
 			window.visualViewport?.removeEventListener("scroll", updateZoom)
 		}
 	}, [])
+
+	// Show scroll hint if the user is idle at the top of the page
+	useEffect(() => {
+		let hasScrolled = false
+		const timerId = window.setTimeout(() => {
+			if (!hasScrolled) setShowScrollHint(true)
+		}, 2500)
+
+		const handleScroll = () => {
+			if (hasScrolled) return
+			hasScrolled = true
+			setShowScrollHint(false)
+			window.removeEventListener("scroll", handleScroll)
+		}
+
+		window.addEventListener("scroll", handleScroll, { passive: true })
+		return () => {
+			window.clearTimeout(timerId)
+			window.removeEventListener("scroll", handleScroll)
+		}
+	}, [])
+
+	useEffect(() => {
+		if (!showScrollHint || !scrollHintRef.current) return undefined
+		const animation = animate({
+			targets: scrollHintRef.current,
+			translateY: [
+				{ value: 0, duration: 0 },
+				{ value: -10, duration: 600 },
+				{ value: 0, duration: 600 },
+			],
+			opacity: [
+				{ value: 1, duration: 400, easing: "easeOutQuad" },
+				{ value: 0.6, duration: 600, easing: "easeInOutQuad" },
+			],
+			easing: "easeInOutSine",
+			loop: true,
+		})
+		return () => animation?.pause()
+	}, [showScrollHint])
 
 	// Measure natural size and compute integer pixel scale + travel
 	useEffect(() => {
@@ -559,7 +602,33 @@ function ParallaxScene() {
 				})()}
 				</div>
 			</div>
-		{showKamiCreator && (
+		{showScrollHint && (
+		<div
+			ref={scrollHintRef}
+			className="pointer-events-none fixed bottom-8 left-1/2 z-[120] flex flex-col items-center gap-2 text-white -translate-x-1/2"
+			style={{ opacity: 0 }}
+		>
+			<span className="text-xs uppercase tracking-[0.3em] text-indigo-100/80">Scroll</span>
+			<svg
+				width="32"
+				height="32"
+				viewBox="0 0 24 24"
+				fill="none"
+				xmlns="http://www.w3.org/2000/svg"
+				className="drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
+				aria-hidden="true"
+			>
+				<path
+					d="M12 5v14m0 0-5-5m5 5 5-5"
+					stroke="currentColor"
+					strokeWidth="1.8"
+					strokeLinecap="round"
+					strokeLinejoin="round"
+				/>
+			</svg>
+		</div>
+	)}
+	{showKamiCreator && (
 			<div className="fixed inset-0 z-[9999]">
 				<KamiCreator onClose={() => setShowKamiCreator(false)} />
 			</div>

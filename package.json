@@ -13,6 +13,7 @@
     "@connectrpc/connect": "^2.1.1",
     "@connectrpc/connect-web": "^2.1.1",
     "@dicebear/collection": "^9.2.4",
+    "animejs": "^4.2.2",
     "framer-motion": "^11.5.5",
     "nice-grpc-common": "^2.0.2",
     "nice-grpc-web": "^3.3.9",
