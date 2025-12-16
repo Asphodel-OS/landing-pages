@@ -29,6 +29,7 @@ const withLayerOffsets = (overrides = {}) => ({
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const PRESENTS_HOLD_MULTIPLIER = 3
+const MAX_SCENE_WIDTH = 2200
 
 function ParallaxScene() {
 	const containerRef = useRef(null)
@@ -46,9 +47,10 @@ function ParallaxScene() {
 	const [imageSizes, setImageSizes] = useState({})
 	const [rawOverflow, setRawOverflow] = useState(0)
 	const [showKamiCreator, setShowKamiCreator] = useState(false)
+	const layoutWidth = viewport.w ? Math.min(viewport.w, MAX_SCENE_WIDTH) : 0
 
 	const responsive = useMemo(() => {
-		const w = viewport.w || 1440
+		const w = layoutWidth || viewport.w || 1440
 		const h = viewport.h || 900
 		const base = {
 			scrollPages: 3.2,
@@ -211,7 +213,7 @@ function ParallaxScene() {
 		}
 
 		return base
-	}, [viewport.w, viewport.h])
+	}, [layoutWidth, viewport.h])
 
 	const {
 		scrollPages,
@@ -260,10 +262,11 @@ function ParallaxScene() {
 		// Use the same source as the first layer to match whichever backdrop is active
 		img.src = layers[0].src
 		const compute = () => {
-			if (!img.naturalWidth || !img.naturalHeight || !viewport.w || !viewport.h) return
+			const widthForScale = layoutWidth || viewport.w
+			if (!img.naturalWidth || !img.naturalHeight || !widthForScale || !viewport.h) return
 			setBaseSize({ w: img.naturalWidth, h: img.naturalHeight })
 			// Integer scaling to preserve pixel art and COVER the viewport both axes
-			const coverW = Math.ceil(viewport.w / img.naturalWidth)
+			const coverW = Math.ceil(widthForScale / img.naturalWidth)
 			const coverH = Math.ceil(viewport.h / img.naturalHeight)
 			const intScale = Math.max(1, Math.max(coverW, coverH))
 			setPixelScale(intScale)
@@ -274,7 +277,7 @@ function ParallaxScene() {
 		}
 		if (img.complete) compute()
 		else img.onload = compute
-	}, [viewport.w, viewport.h])
+	}, [layoutWidth, viewport.w, viewport.h])
 
 	// Preload sizes for each layer to avoid stretching any layer disproportionately
 	useEffect(() => {
@@ -303,7 +306,8 @@ function ParallaxScene() {
 	const sectionHeight = useMemo(() => {
 		return Math.round(effectiveViewportHeight * scrollPages + backdropTravel)
 	}, [effectiveViewportHeight, backdropTravel, scrollPages])
-	const isVeryNarrow = viewport.w > 0 && viewport.w <= 600
+	const effectiveWidth = layoutWidth || viewport.w || 0
+	const isVeryNarrow = effectiveWidth > 0 && effectiveWidth <= 600
 
 	const overflowBuffer = viewportHeightPx * 0.18 + Math.max(24, viewportHeightPx * 0.02)
 	const needsTightSpacing = viewportHeightPx > 0 && rawOverflow <= overflowBuffer
@@ -388,7 +392,13 @@ function ParallaxScene() {
 		<section
 			ref={containerRef}
 			className="relative bg-[#0b0d26]"
-			style={{ height: `${sectionHeight}px`, position: "relative" }}
+			style={{
+				height: `${sectionHeight}px`,
+				position: "relative",
+				maxWidth: `${MAX_SCENE_WIDTH}px`,
+				width: "100%",
+				margin: "0 auto",
+		}}
 		>
 			<div className="sticky top-0 h-screen w-full overflow-hidden">
 				<div
@@ -396,7 +406,7 @@ function ParallaxScene() {
 					style={{
 						transform: `scale(${sceneScale})`,
 						transformOrigin: "center",
-					}}
+						}}
 				>
 					{layers.map((layer) => {
 						// Non-linear per-layer progress to restore strong parallax while
