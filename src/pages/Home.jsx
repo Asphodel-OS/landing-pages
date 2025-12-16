@@ -522,14 +522,14 @@ function ParallaxScene() {
 										}}
 									>
 										<RetroButton as="a" href="https://app.kamigotchi.io/" className="text-center text-[#facc15] drop-shadow-[0_2px_0_rgba(0,0,0,0.8)]">
-											Start New Game
+											Enter World
 										</RetroButton>
 										<RetroButton onClick={() => setShowKamiCreator(true)} variant="secondary" className="text-center text-white">
 											Meme Generator
 										</RetroButton>
 										<RetroButton
 											as="a"
-											href="https://sudoswap.xyz/"
+											href="https://sudoswap.xyz/#/browse/yominet/buy/0x5d4376b62fa8ac16dfabe6a9861e11c33a48c677"
 											target="_blank"
 											rel="noreferrer"
 											variant="violet"
