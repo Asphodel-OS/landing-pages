@@ -561,8 +561,18 @@ function ParallaxScene() {
 							}}
 						>
 							<motion.div style={{ y, maxWidth: ctaMaxWidth, width: "100%" }}>
-								<RetroPanel className="flex flex-col items-center" style={{ padding: ctaPanelPadding }}>
-									<h2 className="text-white text-3xl leading-relaxed font-pixel tracking-wide mt-6 mb-4 drop-shadow-[0_4px_0_rgba(6,9,24,0.8)]">
+								<RetroPanel className="relative flex flex-col items-center" style={{ padding: ctaPanelPadding }}>
+									<a
+									href="https://docs.kamigotchi.io/"
+									target="_blank"
+									rel="noreferrer"
+									aria-label="Open Kamigotchi docs"
+									className="absolute top-4 right-4 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-white/10 text-sm font-bold text-white transition hover:bg-white/20"
+								>
+									?
+								</a>
+
+								<h2 className="text-white text-3xl leading-relaxed font-pixel tracking-wide mt-6 mb-4 drop-shadow-[0_4px_0_rgba(6,9,24,0.8)]">
 										Let's Begin.
 									</h2>
 									<p className="text-indigo-100 text-sm leading-7 max-w-md">
@@ -602,32 +612,33 @@ function ParallaxScene() {
 				})()}
 				</div>
 			</div>
-		{showScrollHint && (
-		<div
-			ref={scrollHintRef}
-			className="pointer-events-none fixed bottom-8 left-1/2 z-[120] flex flex-col items-center gap-2 text-white -translate-x-1/2"
-			style={{ opacity: 0 }}
-		>
-			<span className="text-xs uppercase tracking-[0.3em] text-indigo-100/80">Scroll</span>
-			<svg
-				width="32"
-				height="32"
-				viewBox="0 0 24 24"
-				fill="none"
-				xmlns="http://www.w3.org/2000/svg"
-				className="drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
-				aria-hidden="true"
+			{showScrollHint && (
+			<div
+				ref={scrollHintRef}
+				className="pointer-events-none fixed bottom-8 left-1/2 z-[120] flex flex-col items-center gap-2 text-white -translate-x-1/2"
+				style={{ opacity: 0 }}
 			>
-				<path
-					d="M12 5v14m0 0-5-5m5 5 5-5"
-					stroke="currentColor"
-					strokeWidth="1.8"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-				/>
-			</svg>
-		</div>
-	)}
+				<span className="text-xs uppercase tracking-[0.3em] text-indigo-100/80">Scroll</span>
+				<svg
+					width="32"
+					height="32"
+					viewBox="0 0 24 24"
+					fill="none"
+					xmlns="http://www.w3.org/2000/svg"
+					className="drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
+					aria-hidden="true"
+				>
+					<path
+						d="M12 5v14m0 0-5-5m5 5 5-5"
+						stroke="currentColor"
+						strokeWidth="1.8"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					/>
+				</svg>
+			</div>
+		)}
+
 	{showKamiCreator && (
 			<div className="fixed inset-0 z-[9999]">
 				<KamiCreator onClose={() => setShowKamiCreator(false)} />
