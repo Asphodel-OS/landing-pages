@@ -50,6 +50,7 @@ function ParallaxScene() {
 	const [showKamiCreator, setShowKamiCreator] = useState(false)
 	const [showScrollHint, setShowScrollHint] = useState(false)
 	const scrollHintRef = useRef(null)
+	const bannerRef = useRef(null)
 	const layoutWidth = viewport.w ? Math.min(viewport.w, MAX_SCENE_WIDTH) : 0
 
 	const responsive = useMemo(() => {
@@ -259,45 +260,61 @@ function ParallaxScene() {
 		}
 	}, [])
 
-	// Show scroll hint if the user is idle at the top of the page
+	// Show scroll hint whenever the user is idle and not at the bottom of the page
 	useEffect(() => {
-		let hasScrolled = false
-		const timerId = window.setTimeout(() => {
-			if (!hasScrolled) setShowScrollHint(true)
-		}, 2500)
+		let idleTimer
 
-		const handleScroll = () => {
-			if (hasScrolled) return
-			hasScrolled = true
+		const handleScrollOrResize = () => {
 			setShowScrollHint(false)
-			window.removeEventListener("scroll", handleScroll)
+			window.clearTimeout(idleTimer)
+			idleTimer = window.setTimeout(() => {
+				const scrolledToBottom =
+					window.innerHeight + window.scrollY >= document.body.offsetHeight - 16
+				if (!scrolledToBottom) {
+					setShowScrollHint(true)
+				}
+			}, 2000)
 		}
 
-		window.addEventListener("scroll", handleScroll, { passive: true })
+		handleScrollOrResize()
+		window.addEventListener("scroll", handleScrollOrResize, { passive: true })
+		window.addEventListener("resize", handleScrollOrResize)
+
 		return () => {
-			window.clearTimeout(timerId)
-			window.removeEventListener("scroll", handleScroll)
+			window.removeEventListener("scroll", handleScrollOrResize)
+			window.removeEventListener("resize", handleScrollOrResize)
+			window.clearTimeout(idleTimer)
 		}
 	}, [])
 
 	useEffect(() => {
 		if (!showScrollHint || !scrollHintRef.current) return undefined
-		const animation = animate({
-			targets: scrollHintRef.current,
-			translateY: [
-				{ value: 0, duration: 0 },
-				{ value: -10, duration: 600 },
-				{ value: 0, duration: 600 },
-			],
-			opacity: [
-				{ value: 1, duration: 400, easing: "easeOutQuad" },
-				{ value: 0.6, duration: 600, easing: "easeInOutQuad" },
+		const animation = animate(scrollHintRef.current, {
+			keyframes: [
+				{ translateY: 0, opacity: 0.6, duration: 0 },
+				{ translateY: -10, opacity: 1, duration: 600, easing: "easeOutQuad" },
+				{ translateY: 0, opacity: 0.6, duration: 600, easing: "easeInOutQuad" },
 			],
 			easing: "easeInOutSine",
 			loop: true,
 		})
-		return () => animation?.pause()
+		return () => animation?.pause?.()
 	}, [showScrollHint])
+
+	useEffect(() => {
+		if (!bannerRef.current) return undefined
+		const pulse = () =>
+			animate(bannerRef.current, {
+				keyframes: [
+					{ scale: 1, rotate: 0, duration: 0 },
+					{ scale: 1.08, rotate: -1.5, duration: 350, easing: "easeOutQuad" },
+					{ scale: 1, rotate: 0, duration: 350, easing: "easeInQuad" },
+				],
+			})
+		pulse()
+		const intervalId = window.setInterval(pulse, 4000)
+		return () => window.clearInterval(intervalId)
+	}, [])
 
 	// Measure natural size and compute integer pixel scale + travel
 	useEffect(() => {
@@ -510,6 +527,7 @@ function ParallaxScene() {
 										<span>Presents</span>
 									</RetroRibbon>
 								</RetroPanel>
+								{/* Swag banner appears with main CTA */}
 							</motion.div>
 						</motion.div>
 					)
@@ -560,52 +578,65 @@ function ParallaxScene() {
 								paddingBottom: ctaWrapperPaddingYTight,
 							}}
 						>
-							<motion.div style={{ y, maxWidth: ctaMaxWidth, width: "100%" }}>
-								<RetroPanel className="relative flex flex-col items-center" style={{ padding: ctaPanelPadding }}>
-									<a
-									href="https://docs.kamigotchi.io/"
-									target="_blank"
-									rel="noreferrer"
-									aria-label="Open Kamigotchi docs"
-									className="absolute top-4 right-4 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-white/10 text-sm font-bold text-white transition hover:bg-white/20"
-								>
-									?
-								</a>
-
-								<h2 className="text-white text-3xl leading-relaxed font-pixel tracking-wide mt-6 mb-4 drop-shadow-[0_4px_0_rgba(6,9,24,0.8)]">
-										Let's Begin.
-									</h2>
-									<p className="text-indigo-100 text-sm leading-7 max-w-md">
-										Make a selection.
-									</p>
-									<div
-										className="mt-8 grid w-full"
-										style={{
-											gap: `${ctaGapTight}px`,
-											gridTemplateColumns: `repeat(${ctaCols}, minmax(0, 1fr))`,
-										}}
-									>
-										<RetroButton as="a" href="https://app.kamigotchi.io/" className="text-center text-[#facc15] drop-shadow-[0_2px_0_rgba(0,0,0,0.8)]">
-											Enter World
-										</RetroButton>
-										<RetroButton onClick={() => setShowKamiCreator(true)} variant="secondary" className="text-center text-white">
-											Meme Generator
-										</RetroButton>
-										<RetroButton
-											as="a"
-											href="https://sudoswap.xyz/#/browse/yominet/buy/0x5d4376b62fa8ac16dfabe6a9861e11c33a48c677"
+							<motion.div className="relative pb-8" style={{ y, maxWidth: ctaMaxWidth, width: "100%" }}>
+									<RetroPanel className="relative flex flex-col items-center" style={{ padding: ctaPanelPadding }}>
+										<a
+											href="https://docs.kamigotchi.io/"
 											target="_blank"
 											rel="noreferrer"
-											variant="violet"
-											className="text-center text-white"
+											aria-label="Open Kamigotchi docs"
+											className="absolute top-4 right-4 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-white/10 text-sm font-bold text-white transition hover:bg-white/20"
 										>
-											Buy a Kami
-										</RetroButton>
-										<RetroButton as="a" href="/leaderboard" variant="blue" className="text-center text-white">
-											Stats
-										</RetroButton>
-									</div>
+											?
+										</a>
+
+										<h2 className="text-white text-3xl leading-relaxed font-pixel tracking-wide mt-6 mb-4 drop-shadow-[0_4px_0_rgba(6,9,24,0.8)]">
+											Let's Begin.
+										</h2>
+										<p className="text-indigo-100 text-sm leading-7 max-w-md">
+											Make a selection.
+										</p>
+										<div
+											className="mt-8 grid w-full"
+											style={{
+												gap: `${ctaGapTight}px`,
+												gridTemplateColumns: `repeat(${ctaCols}, minmax(0, 1fr))`,
+											}}
+										>
+											<RetroButton as="a" href="https://app.kamigotchi.io/" className="text-center text-[#facc15] drop-shadow-[0_2px_0_rgba(0,0,0,0.8)]">
+												Enter World
+											</RetroButton>
+											<RetroButton onClick={() => setShowKamiCreator(true)} variant="secondary" className="text-center text-white">
+												Meme Generator
+											</RetroButton>
+											<RetroButton
+										as="a" variant="secondary" variant="secondary"
+												href="https://sudoswap.xyz/#/browse/yominet/buy/0x5d4376b62fa8ac16dfabe6a9861e11c33a48c677"
+												target="_blank"
+												rel="noreferrer"
+												variant="violet"
+												className="text-center text-white"
+											>
+												Buy a Kami
+											</RetroButton>
+											<RetroButton as="a" href="/leaderboard" variant="blue" className="text-center text-white">
+												Stats
+											</RetroButton>
+										</div>
 								</RetroPanel>
+								<div className="mt-10 flex w-full justify-center">
+									<RetroButton
+										ref={bannerRef}
+										as="a"
+										href="https://shop.kamigotchi.io/"
+										target="_blank"
+										rel="noreferrer"
+										className="w-full max-w-[520px] justify-center text-[16px] tracking-[0.6em]"
+										style={{ paddingBlock: "28px", paddingInline: "96px", background: "#facc15", color: "#0b0d26" }}
+									>
+										Get Swag
+									</RetroButton>
+								</div>
 							</motion.div>
 						</motion.div>
 					)
