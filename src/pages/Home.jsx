@@ -260,34 +260,7 @@ function ParallaxScene() {
 		}
 	}, [])
 
-	// Show scroll hint whenever the user is idle and not at the bottom of the page
-	useEffect(() => {
-		let idleTimer
-
-		const handleScrollOrResize = () => {
-			setShowScrollHint(false)
-			window.clearTimeout(idleTimer)
-			idleTimer = window.setTimeout(() => {
-				const scrolledToBottom =
-					window.innerHeight + window.scrollY >= document.body.offsetHeight - 16
-				if (!scrolledToBottom) {
-					setShowScrollHint(true)
-				}
-			}, 2000)
-		}
-
-		handleScrollOrResize()
-		window.addEventListener("scroll", handleScrollOrResize, { passive: true })
-		window.addEventListener("resize", handleScrollOrResize)
-
-		return () => {
-			window.removeEventListener("scroll", handleScrollOrResize)
-			window.removeEventListener("resize", handleScrollOrResize)
-			window.clearTimeout(idleTimer)
-		}
-	}, [])
-
-	useEffect(() => {
+		useEffect(() => {
 		if (!showScrollHint || !scrollHintRef.current) return undefined
 		const animation = animate(scrollHintRef.current, {
 			keyframes: [
@@ -366,6 +339,44 @@ function ParallaxScene() {
 	const sectionHeight = useMemo(() => {
 		return Math.round(effectiveViewportHeight * scrollPages + backdropTravel)
 	}, [effectiveViewportHeight, backdropTravel, scrollPages])
+// Show scroll hint whenever the user is idle and not at the bottom of the page
+	useEffect(() => {
+		if (typeof window === "undefined") return undefined
+		let idleTimer
+		let layoutTimer
+
+		const evaluateScrollState = () => {
+			const doc = document.documentElement
+			const scrolledToBottom =
+				window.innerHeight + window.scrollY >= (doc?.scrollHeight || 0) - 16
+			if (!scrolledToBottom) {
+				setShowScrollHint(true)
+			}
+		}
+
+		const handleScrollOrResize = () => {
+			setShowScrollHint(false)
+			window.clearTimeout(idleTimer)
+			idleTimer = window.setTimeout(evaluateScrollState, 2000)
+		}
+
+		const scheduleInitialCheck = () => {
+			window.clearTimeout(layoutTimer)
+			layoutTimer = window.setTimeout(handleScrollOrResize, 150)
+		}
+
+		scheduleInitialCheck()
+		window.addEventListener("scroll", handleScrollOrResize, { passive: true })
+		window.addEventListener("resize", handleScrollOrResize)
+
+		return () => {
+			window.removeEventListener("scroll", handleScrollOrResize)
+			window.removeEventListener("resize", handleScrollOrResize)
+			window.clearTimeout(idleTimer)
+			window.clearTimeout(layoutTimer)
+		}
+	}, [sectionHeight])
+
 	const effectiveWidth = layoutWidth || viewport.w || 0
 	const isVeryNarrow = effectiveWidth > 0 && effectiveWidth <= 600
 
