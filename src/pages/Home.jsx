@@ -480,9 +480,12 @@ function ParallaxScene() {
 						>
 							<motion.div style={{ y, width: "100%", maxWidth: logoMaxWidth, padding: `0 ${logoPaddingX}px` }}>
 								<div className="flex flex-col items-center">
-									<p className="retro text-white text-[clamp(2.4rem,4.8vw,4.4rem)] tracking-[0.35em] leading-[1.35] drop-shadow-[0_6px_0_rgba(5,7,20,0.85)] px-4 py-2">
-										Kamigotchi
-									</p>
+									<img
+										src="/assets/title-screen/kami-logo.png"
+										alt="Kamigotchi"
+										className="w-full max-w-[420px] px-6 drop-shadow-[0_6px_0_rgba(5,7,20,0.85)]"
+										draggable={false}
+									/>
 								</div>
 							</motion.div>
 						</motion.div>
