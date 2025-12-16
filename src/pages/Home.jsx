@@ -589,6 +589,26 @@ function ParallaxScene() {
 										>
 											?
 										</a>
+								<div className="absolute right-4 top-14 flex flex-col gap-2">
+									<a
+										href="https://x.com/kamigotchiworld"
+										target="_blank"
+										rel="noreferrer"
+										aria-label="Open Kamigotchi on X"
+										className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+									>
+										<img src="/assets/social/logo-white.png" alt="X logo" className="h-3.5 w-3.5" draggable={false} />
+									</a>
+									<a
+										href="https://github.com/Asphodel-OS/kamigotchi"
+										target="_blank"
+										rel="noreferrer"
+										aria-label="Open Kamigotchi on GitHub"
+										className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
+									>
+										<img src="/assets/social/github-mark-white.png" alt="GitHub logo" className="h-3.5 w-3.5" draggable={false} />
+									</a>
+								</div>
 
 										<h2 className="text-white text-3xl leading-relaxed font-pixel tracking-wide mt-6 mb-4 drop-shadow-[0_4px_0_rgba(6,9,24,0.8)]">
 											Let's Begin.
@@ -610,7 +630,7 @@ function ParallaxScene() {
 												Meme Generator
 											</RetroButton>
 											<RetroButton
-										as="a" variant="secondary" variant="secondary"
+												as="a"
 												href="https://sudoswap.xyz/#/browse/yominet/buy/0x5d4376b62fa8ac16dfabe6a9861e11c33a48c677"
 												target="_blank"
 												rel="noreferrer"
