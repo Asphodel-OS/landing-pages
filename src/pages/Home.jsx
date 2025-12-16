@@ -651,7 +651,7 @@ function ParallaxScene() {
 										target="_blank"
 										rel="noreferrer"
 										variant="secondary"
-										className="w-full max-w-[520px] justify-center bg-[#facc15] text-[16px] uppercase tracking-[0.6em] text-[#0b0d26]"
+										className="w-full max-w-[520px] justify-center bg-[#e8633a] text-[16px] uppercase tracking-[0.6em] text-white"
 										style={{ paddingBlock: "28px", paddingInline: "96px" }}
 									>
 										Get Swag
