@@ -483,7 +483,8 @@ function ParallaxScene() {
 									<img
 										src="/assets/title-screen/kami-logo.png"
 										alt="Kamigotchi"
-										className="w-full max-w-[420px] px-6 drop-shadow-[0_6px_0_rgba(5,7,20,0.85)]"
+										className="w-full px-6 drop-shadow-[0_6px_0_rgba(5,7,20,0.85)]"
+										style={{ maxWidth: 840 }}
 										draggable={false}
 									/>
 								</div>
