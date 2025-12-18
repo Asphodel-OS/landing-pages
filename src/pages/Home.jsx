@@ -630,6 +630,7 @@ function ParallaxScene() {
 
 	// Spooky procedural cloud layer using simplex noise
 	useEffect(() => {
+		if (typeof window === "undefined") return undefined
 		const canvas = cloudCanvasRef.current
 		if (!canvas) return undefined
 		const ctx = canvas.getContext("2d", { alpha: true, willReadFrequently: false })
@@ -738,246 +739,38 @@ function ParallaxScene() {
 		}
 	}, [])
 
-	// Cloud shadow layer - same noise pattern but offset, rendered as dark shadows on foreground
-	useEffect(() => {
-		const canvas = cloudShadowCanvasRef.current
-		if (!canvas) return undefined
-		const ctx = canvas.getContext("2d", { alpha: true, willReadFrequently: false })
-		if (!ctx) return undefined
-
-		const noise2D = createNoise2D()
-		let animationId
-		let timeOffset = 0
-		let lastFrameTime = 0
-		const targetFPS = 30
-		const frameInterval = 1000 / targetFPS
-
-		const render = (timestamp) => {
-			if (timestamp - lastFrameTime < frameInterval) {
-				animationId = requestAnimationFrame(render)
-				return
-			}
-			lastFrameTime = timestamp
-
-			const { width, height } = canvas
-			if (width === 0 || height === 0) return
-
-			ctx.clearRect(0, 0, width, height)
-
-			const renderScale = 0.5
-			const renderWidth = Math.floor(width * renderScale)
-			const renderHeight = Math.floor(height * renderScale)
-
-			const imageData = ctx.createImageData(renderWidth, renderHeight)
-			const data = imageData.data
-
-			const pixelSize = 6
-			const shadowOffsetX = 80
-			const shadowOffsetY = 40
-
-			for (let y = 0; y < renderHeight; y += pixelSize) {
-				for (let x = 0; x < renderWidth; x += pixelSize) {
-					const scaleX1 = 0.0008
-					const scaleY1 = 0.004
-					const scaleX2 = 0.002
-					const scaleY2 = 0.008
-
-					const nx = x / renderScale
-					const ny = y / renderScale
-
-					const n1 = noise2D((nx + shadowOffsetX + timeOffset * 40) * scaleX1, (ny + shadowOffsetY) * scaleY1)
-					const n2 = noise2D((nx + shadowOffsetX + timeOffset * 60) * scaleX2, (ny + shadowOffsetY) * scaleY2)
-
-					let value = n1 * 0.7 + n2 * 0.3
-					value = (value + 1) / 2
-
-					const threshold = 0.5
-					const softness = 0.12
-					let alpha = (value - threshold) / softness
-					alpha = Math.max(0, Math.min(1, alpha))
-
-					const verticalFade = 1 - (ny / (height / renderScale)) * 0.5
-					alpha *= verticalFade
-
-					if (alpha > 0.01) {
-						const r = 15
-						const g = 10
-						const b = 20
-						const a = alpha * 150
-
-						for (let py = 0; py < pixelSize && y + py < renderHeight; py++) {
-							for (let px = 0; px < pixelSize && x + px < renderWidth; px++) {
-								const idx = ((y + py) * renderWidth + (x + px)) * 4
-								data[idx] = r
-								data[idx + 1] = g
-								data[idx + 2] = b
-								data[idx + 3] = a
-							}
-						}
-					}
-				}
-			}
-
-			ctx.putImageData(imageData, 0, 0)
-			if (renderScale !== 1) {
-				const tempCanvas = document.createElement('canvas')
-				tempCanvas.width = renderWidth
-				tempCanvas.height = renderHeight
-				const tempCtx = tempCanvas.getContext('2d')
-				tempCtx.putImageData(imageData, 0, 0)
-				
-				ctx.imageSmoothingEnabled = true
-				ctx.imageSmoothingQuality = 'low'
-				ctx.clearRect(0, 0, width, height)
-				ctx.drawImage(tempCanvas, 0, 0, renderWidth, renderHeight, 0, 0, width, height)
-			}
-
-			timeOffset += 0.002
-			animationId = requestAnimationFrame(render)
-		}
-
-		animationId = requestAnimationFrame(render)
-		return () => {
-			if (animationId) cancelAnimationFrame(animationId)
-		}
-	}, [])
-
-	// Ground mist layer - dense fog at the bottom of the scene, visible at max scroll
-	useEffect(() => {
-		const canvas = groundMistCanvasRef.current
-		if (!canvas) return undefined
-		const ctx = canvas.getContext("2d", { alpha: true, willReadFrequently: false })
-		if (!ctx) return undefined
-
-		const noise2D = createNoise2D()
-		let animationId
-		let timeOffset = 0
-		let lastFrameTime = 0
-		const targetFPS = 30
-		const frameInterval = 1000 / targetFPS
-
-		const render = (timestamp) => {
-			if (timestamp - lastFrameTime < frameInterval) {
-				animationId = requestAnimationFrame(render)
-				return
-			}
-			lastFrameTime = timestamp
-
-			const { width, height } = canvas
-			if (width === 0 || height === 0) return
-
-			ctx.clearRect(0, 0, width, height)
-
-			const renderScale = 0.5
-			const renderWidth = Math.floor(width * renderScale)
-			const renderHeight = Math.floor(height * renderScale)
-
-			const imageData = ctx.createImageData(renderWidth, renderHeight)
-			const data = imageData.data
-
-			const pixelSize = 5
-			const fogHeightPercent = 0.2 // Take up 20% of screen from bottom
-
-			for (let y = 0; y < renderHeight; y += pixelSize) {
-				for (let x = 0; x < renderWidth; x += pixelSize) {
-					// 1/3 as stretched in x = 3x larger scale value
-					const scaleX = 0.0018 // Was 0.0006, now 3x
-					const scaleY = 0.012
-
-					const nx = x / renderScale
-					const ny = y / renderScale
-
-					const n1 = noise2D((nx + timeOffset * 33) * scaleX, ny * scaleY) // Faster movement
-					const n2 = noise2D((nx - timeOffset * 20) * scaleX * 2, ny * scaleY * 1.5)
-
-					let value = n1 * 0.6 + n2 * 0.4
-					value = (value + 1) / 2
-
-					const threshold = 0.42
-					const softness = 0.18
-					let alpha = (value - threshold) / softness
-					alpha = Math.max(0, Math.min(1, alpha))
-
-					// Only render in bottom 20% of screen
-					const normalizedY = ny / (height / renderScale)
-					const fogZone = 1 - fogHeightPercent // Top of fog zone (80% down)
-					
-					if (normalizedY < fogZone) {
-						// Above fog zone, no fog
-						continue
-					}
-					
-					// Within fog zone: fade from top of zone (0) to bottom (1)
-					const fogDepth = (normalizedY - fogZone) / fogHeightPercent
-					const bottomFade = Math.pow(fogDepth, 1.5) // Gentler falloff for denser fog
-					alpha *= bottomFade
-
-					if (alpha > 0.01) {
-						const r = 45 + value * 20
-						const g = 40 + value * 25
-						const b = 65 + value * 30
-						const a = alpha * 220 // Slightly denser
-
-						for (let py = 0; py < pixelSize && y + py < renderHeight; py++) {
-							for (let px = 0; px < pixelSize && x + px < renderWidth; px++) {
-								const idx = ((y + py) * renderWidth + (x + px)) * 4
-								data[idx] = r
-								data[idx + 1] = g
-								data[idx + 2] = b
-								data[idx + 3] = a
-							}
-						}
-					}
-				}
-			}
-
-			ctx.putImageData(imageData, 0, 0)
-			if (renderScale !== 1) {
-				const tempCanvas = document.createElement('canvas')
-				tempCanvas.width = renderWidth
-				tempCanvas.height = renderHeight
-				const tempCtx = tempCanvas.getContext('2d')
-				tempCtx.putImageData(imageData, 0, 0)
-				
-				ctx.imageSmoothingEnabled = true
-				ctx.imageSmoothingQuality = 'low'
-				ctx.clearRect(0, 0, width, height)
-				ctx.drawImage(tempCanvas, 0, 0, renderWidth, renderHeight, 0, 0, width, height)
-			}
-
-			timeOffset += 0.0027 // 1/3 faster than other clouds (was 0.0015, now ~1.8x for 33% faster)
-			animationId = requestAnimationFrame(render)
-		}
-
-		animationId = requestAnimationFrame(render)
-		return () => {
-			if (animationId) cancelAnimationFrame(animationId)
-		}
-	}, [])
-
 	// Resize all cloud canvases to match scene
 	useEffect(() => {
 		// Calculate cloud dimensions: match backdrop width, fill viewport height
-		const backdropWidth = baseSize.w * pixelScale || viewport.w
+		const backdropWidth = baseSize.w * pixelScale || 0
 		const viewportHeight = viewport.h || 0
+		const fullWidth = Math.max(backdropWidth, viewport.w || 0)
 		
-		if (backdropWidth > 0 && viewportHeight > 0) {
-			setCloudDimensions({ width: backdropWidth, height: viewportHeight })
+		if (fullWidth > 0 && viewportHeight > 0) {
+			setCloudDimensions({ width: fullWidth, height: viewportHeight })
 		}
 
 		let resizeTimeout
 		const resize = (canvas) => {
 			if (!canvas) return
 			const dpr = Math.min(window.devicePixelRatio || 1, 2) // Cap at 2x for performance
-			const w = cloudDimensions.width || viewport.w
-			const h = cloudDimensions.height || viewport.h
+			const w = fullWidth || viewport.w
+			const h = viewportHeight || viewport.h
 			
+			// Set actual canvas dimensions
 			canvas.width = w * dpr
 			canvas.height = h * dpr
+			
+			// Set CSS dimensions
 			canvas.style.width = `${w}px`
 			canvas.style.height = `${h}px`
+			
+			// Scale context for DPR
 			const ctx = canvas.getContext("2d")
-			if (ctx) ctx.scale(dpr, dpr)
+			if (ctx) {
+				ctx.setTransform(1, 0, 0, 1, 0, 0) // Reset transform
+				ctx.scale(dpr, dpr)
+			}
 		}
 
 		resize(cloudCanvasRef.current)
@@ -999,7 +792,7 @@ function ParallaxScene() {
 			window.removeEventListener("resize", handleResize)
 			if (resizeTimeout) clearTimeout(resizeTimeout)
 		}
-	}, [viewport.w, viewport.h, baseSize.w, pixelScale, cloudDimensions.width, cloudDimensions.height])
+	}, [viewport.w, viewport.h, baseSize.w, pixelScale])
 
 	useEffect(() => {
 		if (typeof window === "undefined" || typeof IntersectionObserver === "undefined") return undefined
