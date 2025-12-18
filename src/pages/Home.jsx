@@ -31,8 +31,8 @@ const withLayerOffsets = (overrides = {}) => ({
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const PRESENTS_HOLD_MULTIPLIER = 3
 const MAX_SCENE_WIDTH = 2200
-const LOGO_CTA_GAP = 20
-const STACK_SAFE_MARGIN = 20
+const LOGO_CTA_GAP = 5
+const STACK_SAFE_MARGIN = 10
 
 function ParallaxScene() {
 	const containerRef = useRef(null)
@@ -54,10 +54,12 @@ function ParallaxScene() {
 	const scrollHintRef = useRef(null)
 	const bannerRef = useRef(null)
 	const midLogoRef = useRef(null)
+	const midLogoSpriteRef = useRef(null)
 	const ctaPanelRef = useRef(null)
 	const layoutWidth = viewport.w ? Math.min(viewport.w, MAX_SCENE_WIDTH) : 0
 	const [midLogoHeight, setMidLogoHeight] = useState(0)
 	const [ctaHeight, setCtaHeight] = useState(0)
+	const [logoIdleActive, setLogoIdleActive] = useState(false)
 
 	const responsive = useMemo(() => {
 		const w = layoutWidth || viewport.w || 1440
@@ -545,6 +547,40 @@ function ParallaxScene() {
 		return { logo: logoCenter, cta: ctaCenter }
 	}, [midLogoHeight, ctaHeight, finalLogoTargetY, ctaFinalY, viewportHeightPx])
 
+	useEffect(() => {
+		const threshold = Math.min(finalStart + 0.02, 0.995)
+		const update = (value) => {
+			const shouldIdle = value >= threshold
+			setLogoIdleActive((prev) => (prev === shouldIdle ? prev : shouldIdle))
+		}
+		update(scrollYProgress.get?.() ?? 0)
+		const unsubscribe = scrollYProgress.on("change", update)
+		return () => unsubscribe?.()
+	}, [scrollYProgress, finalStart])
+
+	useEffect(() => {
+		const node = midLogoSpriteRef.current
+		if (!node) return undefined
+		if (!logoIdleActive) {
+			node.style.removeProperty("transform")
+			return undefined
+		}
+	const amplitude = Math.max(3, Math.min(LOGO_CTA_GAP - 1, LOGO_CTA_GAP * 0.85))
+		const animation = animate(node, {
+			keyframes: [
+				{ translateY: 0, rotateY: -1.5, duration: 0 },
+				{ translateY: -amplitude, rotateY: 1.5, duration: 2600, easing: "easeInOutSine" },
+				{ translateY: 0, rotateY: -1.5, duration: 2600, easing: "easeInOutSine" },
+			],
+			loop: true,
+			direction: "normal",
+		})
+		return () => {
+			animation?.pause?.()
+			node.style.removeProperty("transform")
+		}
+	}, [logoIdleActive])
+
 	return (
 		<section
 			ref={containerRef}
@@ -646,7 +682,11 @@ function ParallaxScene() {
 							style={{ opacity }}
 						>
 							<motion.div ref={midLogoRef} style={{ y, width: "100%", maxWidth: logoMaxWidth, padding: `0 ${logoPaddingX}px` }}>
-								<div className="flex flex-col items-center">
+								<div
+									ref={midLogoSpriteRef}
+									className="flex flex-col items-center will-change-transform"
+									style={{ transformStyle: "preserve-3d" }}
+								>
 									<img
 										src="/assets/title-screen/kami-logo.png"
 										alt="Kamigotchi"
