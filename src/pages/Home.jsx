@@ -36,6 +36,7 @@ const STACK_SAFE_MARGIN = 20
 
 function ParallaxScene() {
 	const containerRef = useRef(null)
+	const stickyRef = useRef(null)
 	const { scrollYProgress } = useScroll({
 		target: containerRef,
 		offset: ["start start", "end start"],
@@ -59,6 +60,10 @@ function ParallaxScene() {
 	const midLogoRef = useRef(null)
 	const midLogoSpriteRef = useRef(null)
 	const ctaPanelRef = useRef(null)
+	const butterflyScrollRefs = useRef({})
+	const butterflyAnimeRefs = useRef({})
+	const butterflyAnims = useRef({})
+	const butterflyVisible = useRef({})
 	const layoutWidth = useMemo(() => {
 		const viewportWidth = viewport.w || 0
 		const baseWidth = Math.min(viewportWidth, MAX_SCENE_WIDTH)
@@ -69,6 +74,14 @@ function ParallaxScene() {
 	const [ctaHeight, setCtaHeight] = useState(0)
 	const [logoIdleActive, setLogoIdleActive] = useState(false)
 	const logoIdleAmplitude = Math.max(2, Math.min(LOGO_CTA_GAP - 1, LOGO_CTA_GAP * 0.85))
+	const BUTTERFLY_SOURCES = useMemo(
+		() => [
+			"/assets/title-screen/Butterflies_1.png",
+			"/assets/title-screen/Butterflies_2.png",
+			"/assets/title-screen/Butterflies_3.png",
+		],
+		[]
+	)
 
 	const responsive = useMemo(() => {
 		const w = layoutWidth || viewport.w || 1440
@@ -597,6 +610,123 @@ function ParallaxScene() {
 		}
 	}, [logoIdleActive, logoIdleAmplitude])
 
+	useEffect(() => {
+		if (typeof window === "undefined" || typeof IntersectionObserver === "undefined") return undefined
+		const root = stickyRef.current
+		if (!root) return undefined
+
+		const intersectsRoot = (node) => {
+			if (!node) return false
+			const rootRect = root.getBoundingClientRect()
+			const rect = node.getBoundingClientRect()
+			const xOverlap = Math.max(0, Math.min(rect.right, rootRect.right) - Math.max(rect.left, rootRect.left))
+			const yOverlap = Math.max(0, Math.min(rect.bottom, rootRect.bottom) - Math.max(rect.top, rootRect.top))
+			return xOverlap > 0 && yOverlap > 0
+		}
+
+		const stopAndReset = (src) => {
+			const node = butterflyAnimeRefs.current[src]
+			if (!node) return
+			const anim = butterflyAnims.current[src]
+			anim?.pause?.()
+			delete butterflyAnims.current[src]
+			// Reset to default relationships (no anime transforms)
+			node.style.removeProperty("transform")
+		}
+
+		const startOrRestart = (src) => {
+			const node = butterflyAnimeRefs.current[src]
+			if (!node) {
+				// eslint-disable-next-line no-console
+				console.warn("[butterflies] startOrRestart called but node not found for", src)
+				return
+			}
+
+			// Deterministic opposing drift per butterfly
+			const profile =
+				src.endsWith("Butterflies_1.png")
+					? { x: 36, y: 52, rot: 4.4, yaw: -4.0, dur: 6400 }
+					: src.endsWith("Butterflies_2.png")
+						? { x: -44, y: 40, rot: -4.0, yaw: 4.4, dur: 7000 }
+						: { x: 28, y: 60, rot: 3.6, yaw: 3.2, dur: 7600 }
+
+			// Never move downwards: keep translateY <= 0 so the "top of the div" never slides into view.
+			const baselineY = 0
+			const yA = -profile.y
+			const yB = -Math.round(profile.y * 0.45)
+
+			const existing = butterflyAnims.current[src]
+			if (existing?.pause) existing.pause()
+			delete butterflyAnims.current[src]
+
+			// eslint-disable-next-line no-console
+			console.log("[butterflies] starting animation for", src, profile)
+
+			try {
+				// Use same keyframes format as the working logo animation
+				const anim = animate(node, {
+					keyframes: [
+						{ translateX: 0, translateY: baselineY, rotateZ: 0, rotateY: profile.yaw, duration: 0 },
+						{ translateX: profile.x, translateY: yA, rotateZ: profile.rot, rotateY: -profile.yaw, duration: profile.dur / 2, easing: "easeInOutSine" },
+						{ translateX: -profile.x, translateY: yB, rotateZ: -profile.rot, rotateY: profile.yaw, duration: profile.dur / 2, easing: "easeInOutSine" },
+						{ translateX: 0, translateY: baselineY, rotateZ: 0, rotateY: profile.yaw, duration: 100, easing: "linear" },
+					],
+					loop: true,
+				})
+				butterflyAnims.current[src] = anim
+				// eslint-disable-next-line no-console
+				console.log("[butterflies] animation started successfully for", src)
+			} catch (error) {
+				// eslint-disable-next-line no-console
+				console.warn("[butterflies] anime failed to start", src, error)
+			}
+		}
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				entries.forEach((entry) => {
+					const src = entry.target?.dataset?.butterflySrc
+					if (!src) return
+					const wasVisible = Boolean(butterflyVisible.current[src])
+					const isVisible = Boolean(entry.isIntersecting && entry.intersectionRatio > 0)
+					// eslint-disable-next-line no-console
+					console.log("[butterflies] observer callback", { src, wasVisible, isVisible, ratio: entry.intersectionRatio })
+					if (isVisible && !wasVisible) {
+						butterflyVisible.current[src] = true
+						startOrRestart(src)
+					} else if (!isVisible && wasVisible) {
+						butterflyVisible.current[src] = false
+						stopAndReset(src)
+					}
+				})
+			},
+			{ root, threshold: 0.01 }
+		)
+
+		BUTTERFLY_SOURCES.forEach((src) => {
+			const node = butterflyScrollRefs.current[src]
+			if (node) observer.observe(node)
+		})
+
+		// Ensure animations start on initial paint when already in view (IO can be lazy on some browsers).
+		window.requestAnimationFrame(() => {
+			BUTTERFLY_SOURCES.forEach((src) => {
+				const scrollNode = butterflyScrollRefs.current[src]
+				if (!scrollNode) return
+				if (intersectsRoot(scrollNode)) {
+					butterflyVisible.current[src] = true
+					startOrRestart(src)
+				}
+			})
+		})
+
+		return () => {
+			observer.disconnect()
+			butterflyVisible.current = {}
+			BUTTERFLY_SOURCES.forEach((src) => stopAndReset(src))
+		}
+	}, [BUTTERFLY_SOURCES])
+
 	return (
 		<section
 			ref={containerRef}
@@ -609,7 +739,7 @@ function ParallaxScene() {
 				margin: "0 auto",
 		}}
 		>
-			<div className="sticky top-0 h-screen w-full overflow-hidden">
+			<div ref={stickyRef} className="sticky top-0 h-screen w-full overflow-hidden">
 				<div
 					className="relative h-full w-full"
 					style={{
@@ -618,6 +748,10 @@ function ParallaxScene() {
 						}}
 				>
 					{layers.map((layer) => {
+						const isButterfly =
+							layer.src === "/assets/title-screen/Butterflies_1.png" ||
+							layer.src === "/assets/title-screen/Butterflies_2.png" ||
+							layer.src === "/assets/title-screen/Butterflies_3.png"
 						// Non-linear per-layer progress to restore strong parallax while
 						// keeping all layers aligned at the end frame.
 						const curved = useTransform(scrollYProgress, (v) =>
@@ -632,16 +766,45 @@ function ParallaxScene() {
 						return (
 							<div
 								key={layer.src}
-								className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
+								className="absolute top-1/2 left-1/2 pointer-events-none select-none"
 								style={{ zIndex: layer.z, width: displayedW, height: displayedH }}
 							>
-								<motion.img
-									src={layer.src}
-									alt=""
-									className="pixel-image block w-full h-full"
-									style={{ y }}
-									draggable={false}
-								/>
+								<div className="-translate-x-1/2 -translate-y-1/2" style={{ width: displayedW, height: displayedH }}>
+									{isButterfly ? (
+										<motion.div
+											ref={(node) => {
+												if (!node) return
+												butterflyScrollRefs.current[layer.src] = node
+											}}
+											data-butterfly-src={layer.src}
+											style={{ y, width: "100%", height: "100%" }}
+										>
+											<div
+												ref={(node) => {
+													if (!node) return
+													butterflyAnimeRefs.current[layer.src] = node
+												}}
+												className="will-change-transform"
+												style={{ width: "100%", height: "100%", transformStyle: "preserve-3d" }}
+											>
+												<img
+													src={layer.src}
+													alt=""
+													className="pixel-image block w-full h-full"
+													draggable={false}
+												/>
+											</div>
+										</motion.div>
+									) : (
+										<motion.img
+											src={layer.src}
+											alt=""
+											className="pixel-image block w-full h-full"
+											style={{ y }}
+											draggable={false}
+										/>
+									)}
+								</div>
 							</div>
 						)
 					})}
