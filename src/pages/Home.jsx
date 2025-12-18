@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import { RetroPanel, RetroRibbon, RetroButton } from "@/components/ui/8bit/RetroElements"
 import { KamiCreator } from "../components/KamiCreator/KamiCreator"
@@ -31,8 +31,8 @@ const withLayerOffsets = (overrides = {}) => ({
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const PRESENTS_HOLD_MULTIPLIER = 3
 const MAX_SCENE_WIDTH = 2200
-const LOGO_CTA_GAP = 5
-const STACK_SAFE_MARGIN = 10
+const LOGO_CTA_GAP = 20
+const STACK_SAFE_MARGIN = 20
 
 function ParallaxScene() {
 	const containerRef = useRef(null)
@@ -42,7 +42,10 @@ function ParallaxScene() {
 	})
 
 	// Viewport and pixel-snap scaling
-	const [viewport, setViewport] = useState({ w: 0, h: 0 })
+	const [viewport, setViewport] = useState(() => {
+		if (typeof window === "undefined") return { w: 0, h: 0 }
+		return { w: window.innerWidth, h: window.innerHeight }
+	})
 	const [backdropTravel, setBackdropTravel] = useState(300) // fallback travel
 	const [baseSize, setBaseSize] = useState({ w: 0, h: 0 })
 	const [pixelScale, setPixelScale] = useState(1)
@@ -65,10 +68,7 @@ function ParallaxScene() {
 	const [midLogoHeight, setMidLogoHeight] = useState(0)
 	const [ctaHeight, setCtaHeight] = useState(0)
 	const [logoIdleActive, setLogoIdleActive] = useState(false)
-	const logoIdleAmplitude = useMemo(
-		() => Math.max(2, Math.min(LOGO_CTA_GAP - 1, LOGO_CTA_GAP * 0.85)),
-		[]
-	)
+	const logoIdleAmplitude = Math.max(2, Math.min(LOGO_CTA_GAP - 1, LOGO_CTA_GAP * 0.85))
 
 	const responsive = useMemo(() => {
 		const w = layoutWidth || viewport.w || 1440
@@ -408,44 +408,44 @@ function ParallaxScene() {
 	const ctaWrapperPaddingYTight = Math.round(ctaWrapperPaddingY * spacingScale)
 	const ctaGapTight = Math.max(8, Math.round(ctaGap * spacingScale))
 
-	// Track rendered heights so we can intelligently space stacked elements at the end
-	useEffect(() => {
-		if (typeof window === "undefined") return undefined
-		let frameId
+	// Track rendered heights so we can intelligently space stacked elements at the end.
+	// Use ResizeObserver so late-loading images/fonts still update measurements (critical for
+	// Chrome/Vercel reloads mid-scroll).
+	useLayoutEffect(() => {
+		if (typeof window === "undefined" || typeof ResizeObserver === "undefined") return undefined
+		const node = midLogoRef.current
+		if (!node) return undefined
 		const measure = () => {
-			if (frameId) window.cancelAnimationFrame(frameId)
-			frameId = window.requestAnimationFrame(() => {
-				if (!midLogoRef.current) return
-				const rect = midLogoRef.current.getBoundingClientRect()
-				if (!rect?.height) return
-				setMidLogoHeight(Math.round(rect.height))
-			})
+			const rect = node.getBoundingClientRect()
+			if (!rect?.height) return
+			setMidLogoHeight(Math.round(rect.height))
 		}
 		measure()
+		const ro = new ResizeObserver(() => measure())
+		ro.observe(node)
 		window.addEventListener("resize", measure)
 		return () => {
 			window.removeEventListener("resize", measure)
-			if (frameId) window.cancelAnimationFrame(frameId)
+			ro.disconnect()
 		}
 	}, [logoMaxWidth, logoPaddingX, viewport.w, viewport.h])
 
-	useEffect(() => {
-		if (typeof window === "undefined") return undefined
-		let frameId
+	useLayoutEffect(() => {
+		if (typeof window === "undefined" || typeof ResizeObserver === "undefined") return undefined
+		const node = ctaPanelRef.current
+		if (!node) return undefined
 		const measure = () => {
-			if (frameId) window.cancelAnimationFrame(frameId)
-			frameId = window.requestAnimationFrame(() => {
-				if (!ctaPanelRef.current) return
-				const rect = ctaPanelRef.current.getBoundingClientRect()
-				if (!rect?.height) return
-				setCtaHeight(Math.round(rect.height))
-			})
+			const rect = node.getBoundingClientRect()
+			if (!rect?.height) return
+			setCtaHeight(Math.round(rect.height))
 		}
 		measure()
+		const ro = new ResizeObserver(() => measure())
+		ro.observe(node)
 		window.addEventListener("resize", measure)
 		return () => {
 			window.removeEventListener("resize", measure)
-			if (frameId) window.cancelAnimationFrame(frameId)
+			ro.disconnect()
 		}
 	}, [ctaCols, ctaGapTight, ctaMaxWidth, viewport.w, viewport.h])
 
