@@ -31,6 +31,7 @@ const withLayerOffsets = (overrides = {}) => ({
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const PRESENTS_HOLD_MULTIPLIER = 3
 const MAX_SCENE_WIDTH = 2200
+const LOGO_CTA_GAP = 10
 
 function ParallaxScene() {
 	const containerRef = useRef(null)
@@ -51,7 +52,11 @@ function ParallaxScene() {
 	const [showScrollHint, setShowScrollHint] = useState(false)
 	const scrollHintRef = useRef(null)
 	const bannerRef = useRef(null)
+	const midLogoRef = useRef(null)
+	const ctaPanelRef = useRef(null)
 	const layoutWidth = viewport.w ? Math.min(viewport.w, MAX_SCENE_WIDTH) : 0
+	const [midLogoHeight, setMidLogoHeight] = useState(0)
+	const [ctaHeight, setCtaHeight] = useState(0)
 
 	const responsive = useMemo(() => {
 		const w = layoutWidth || viewport.w || 1440
@@ -208,9 +213,9 @@ function ParallaxScene() {
 				logoMaxWidth: 720,
 				logoPaddingX: 32,
 				layerOffsets: withLayerOffsets({
-					"/assets/title-screen/Mountain_range.png": 0.57,
-					"/assets/title-screen/River.png": 0.61,
-					"/assets/title-screen/Gravestones.png": 0.64,
+					"/assets/title-screen/Mountain_range.png": 0.65,
+					"/assets/title-screen/River.png": 0.72,
+					"/assets/title-screen/Gravestones.png": 0.59,
 					"/assets/title-screen/Torii_gate.png": 0.6,
 				}),
 			}
@@ -391,6 +396,47 @@ function ParallaxScene() {
 	const ctaWrapperPaddingYTight = Math.round(ctaWrapperPaddingY * spacingScale)
 	const ctaGapTight = Math.max(8, Math.round(ctaGap * spacingScale))
 
+	// Track rendered heights so we can intelligently space stacked elements at the end
+	useEffect(() => {
+		if (typeof window === "undefined") return undefined
+		let frameId
+		const measure = () => {
+			if (frameId) window.cancelAnimationFrame(frameId)
+			frameId = window.requestAnimationFrame(() => {
+				if (!midLogoRef.current) return
+				const rect = midLogoRef.current.getBoundingClientRect()
+				if (!rect?.height) return
+				setMidLogoHeight(Math.round(rect.height))
+			})
+		}
+		measure()
+		window.addEventListener("resize", measure)
+		return () => {
+			window.removeEventListener("resize", measure)
+			if (frameId) window.cancelAnimationFrame(frameId)
+		}
+	}, [logoMaxWidth, logoPaddingX, viewport.w, viewport.h])
+
+	useEffect(() => {
+		if (typeof window === "undefined") return undefined
+		let frameId
+		const measure = () => {
+			if (frameId) window.cancelAnimationFrame(frameId)
+			frameId = window.requestAnimationFrame(() => {
+				if (!ctaPanelRef.current) return
+				const rect = ctaPanelRef.current.getBoundingClientRect()
+				if (!rect?.height) return
+				setCtaHeight(Math.round(rect.height))
+			})
+		}
+		measure()
+		window.addEventListener("resize", measure)
+		return () => {
+			window.removeEventListener("resize", measure)
+			if (frameId) window.cancelAnimationFrame(frameId)
+		}
+	}, [ctaCols, ctaGapTight, ctaMaxWidth, viewport.w, viewport.h])
+
 	const introTimings = useMemo(() => {
 		const latestIntroStart = Math.max(0, introFraction - 0.01)
 		const introStart = Math.min(introDelayFraction, latestIntroStart)
@@ -454,10 +500,18 @@ function ParallaxScene() {
 		const dynamicLift = Math.min(vh * 0.74, 660)
 		return -Math.max(dynamicLift, 300)
 	}, [viewport.h])
-	const finalLogoY = useMemo(
+	const finalLogoFallbackY = useMemo(
 		() => (needsTightSpacing ? finalLogoBaseY * 0.92 : finalLogoBaseY),
 		[finalLogoBaseY, needsTightSpacing]
 	)
+	const finalLogoTargetY = useMemo(() => {
+		if (!midLogoHeight || !ctaHeight) return finalLogoFallbackY
+		return -(ctaHeight / 2 + LOGO_CTA_GAP + midLogoHeight / 2)
+	}, [midLogoHeight, ctaHeight, finalLogoFallbackY])
+	const ctaFinalY = useMemo(() => {
+		if (!midLogoHeight) return -10
+		return (midLogoHeight + LOGO_CTA_GAP) / 2
+	}, [midLogoHeight])
 
 	return (
 		<section
@@ -552,14 +606,14 @@ function ParallaxScene() {
 					const y = useTransform(
 						scrollYProgress,
 						[midLogoTimings.start, midLogoTimings.hold, ctaFadeStart, 1],
-						[-80, midLogoY, midLogoY, finalLogoY]
+						[-80, midLogoY, finalLogoTargetY, finalLogoTargetY]
 					)
 					return (
 						<motion.div
 							className={`absolute inset-0 z-[92] flex ${isVeryNarrow ? "items-start" : "items-center"} justify-center pointer-events-none`}
 							style={{ opacity }}
 						>
-							<motion.div style={{ y, width: "100%", maxWidth: logoMaxWidth, padding: `0 ${logoPaddingX}px` }}>
+							<motion.div ref={midLogoRef} style={{ y, width: "100%", maxWidth: logoMaxWidth, padding: `0 ${logoPaddingX}px` }}>
 								<div className="flex flex-col items-center">
 									<img
 										src="/assets/title-screen/kami-logo.png"
@@ -576,7 +630,7 @@ function ParallaxScene() {
 				{/* Final CTA only, 100% opacity (shows in last segment) */}
 				{(() => {
 					const opacity = useTransform(scrollYProgress, [ctaFadeStart, finalStart], [0, 1])
-					const y = useTransform(scrollYProgress, [ctaFadeStart, 1], [40, -10])
+					const y = useTransform(scrollYProgress, [ctaFadeStart, 1], [40, ctaFinalY])
 					return (
 						<motion.div
 							className="absolute inset-0 z-[90] flex items-center justify-center"
@@ -588,7 +642,7 @@ function ParallaxScene() {
 								paddingBottom: ctaWrapperPaddingYTight,
 							}}
 						>
-							<motion.div className="relative pb-8" style={{ y, maxWidth: ctaMaxWidth, width: "100%" }}>
+							<motion.div ref={ctaPanelRef} className="relative pb-8" style={{ y, maxWidth: ctaMaxWidth, width: "100%" }}>
 									<RetroPanel className="relative flex flex-col items-center" style={{ padding: ctaPanelPadding }}>
 										<a
 											href="https://docs.kamigotchi.io/"
