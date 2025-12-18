@@ -31,7 +31,8 @@ const withLayerOffsets = (overrides = {}) => ({
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const PRESENTS_HOLD_MULTIPLIER = 3
 const MAX_SCENE_WIDTH = 2200
-const LOGO_CTA_GAP = 10
+const LOGO_CTA_GAP = 20
+const STACK_SAFE_MARGIN = 20
 
 function ParallaxScene() {
 	const containerRef = useRef(null)
@@ -513,6 +514,37 @@ function ParallaxScene() {
 		return (midLogoHeight + LOGO_CTA_GAP) / 2
 	}, [midLogoHeight])
 
+	const stackedCenters = useMemo(() => {
+		if (!midLogoHeight || !ctaHeight) {
+			return { logo: finalLogoTargetY, cta: ctaFinalY }
+		}
+		const viewportHalf = (viewportHeightPx || 0) / 2
+		if (viewportHalf <= 0) {
+			return { logo: finalLogoTargetY, cta: ctaFinalY }
+		}
+
+		let logoCenter = finalLogoTargetY
+		let ctaCenter = ctaFinalY
+		const topBound = -viewportHalf + STACK_SAFE_MARGIN
+		const bottomBound = viewportHalf - STACK_SAFE_MARGIN
+
+		const logoTop = logoCenter - midLogoHeight / 2
+		const topOverflow = topBound - logoTop
+		if (topOverflow > 0) {
+			logoCenter += topOverflow
+			ctaCenter += topOverflow
+		}
+
+		const ctaBottom = ctaCenter + ctaHeight / 2
+		const bottomOverflow = ctaBottom - bottomBound
+		if (bottomOverflow > 0) {
+			logoCenter -= bottomOverflow
+			ctaCenter -= bottomOverflow
+		}
+
+		return { logo: logoCenter, cta: ctaCenter }
+	}, [midLogoHeight, ctaHeight, finalLogoTargetY, ctaFinalY, viewportHeightPx])
+
 	return (
 		<section
 			ref={containerRef}
@@ -606,7 +638,7 @@ function ParallaxScene() {
 					const y = useTransform(
 						scrollYProgress,
 						[midLogoTimings.start, midLogoTimings.hold, ctaFadeStart, 1],
-						[-80, midLogoY, finalLogoTargetY, finalLogoTargetY]
+						[-80, midLogoY, stackedCenters.logo, stackedCenters.logo]
 					)
 					return (
 						<motion.div
@@ -630,7 +662,7 @@ function ParallaxScene() {
 				{/* Final CTA only, 100% opacity (shows in last segment) */}
 				{(() => {
 					const opacity = useTransform(scrollYProgress, [ctaFadeStart, finalStart], [0, 1])
-					const y = useTransform(scrollYProgress, [ctaFadeStart, 1], [40, ctaFinalY])
+					const y = useTransform(scrollYProgress, [ctaFadeStart, 1], [40, stackedCenters.cta])
 					return (
 						<motion.div
 							className="absolute inset-0 z-[90] flex items-center justify-center"
