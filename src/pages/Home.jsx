@@ -60,6 +60,10 @@ function ParallaxScene() {
 	const [midLogoHeight, setMidLogoHeight] = useState(0)
 	const [ctaHeight, setCtaHeight] = useState(0)
 	const [logoIdleActive, setLogoIdleActive] = useState(false)
+	const logoIdleAmplitude = useMemo(
+		() => Math.max(2, Math.min(LOGO_CTA_GAP - 1, LOGO_CTA_GAP * 0.85)),
+		[]
+	)
 
 	const responsive = useMemo(() => {
 		const w = layoutWidth || viewport.w || 1440
@@ -527,25 +531,33 @@ function ParallaxScene() {
 
 		let logoCenter = finalLogoTargetY
 		let ctaCenter = ctaFinalY
-		const topBound = -viewportHalf + STACK_SAFE_MARGIN
+		const topBound = -viewportHalf + STACK_SAFE_MARGIN + logoIdleAmplitude
 		const bottomBound = viewportHalf - STACK_SAFE_MARGIN
 
-		const logoTop = logoCenter - midLogoHeight / 2
-		const topOverflow = topBound - logoTop
-		if (topOverflow > 0) {
-			logoCenter += topOverflow
-			ctaCenter += topOverflow
+		const clampTop = () => {
+			const logoTop = logoCenter - midLogoHeight / 2
+			const topOverflow = topBound - logoTop
+			if (topOverflow > 0) {
+				logoCenter += topOverflow
+				ctaCenter += topOverflow
+			}
 		}
 
-		const ctaBottom = ctaCenter + ctaHeight / 2
-		const bottomOverflow = ctaBottom - bottomBound
-		if (bottomOverflow > 0) {
-			logoCenter -= bottomOverflow
-			ctaCenter -= bottomOverflow
+		const clampBottom = () => {
+			const ctaBottom = ctaCenter + ctaHeight / 2
+			const bottomOverflow = ctaBottom - bottomBound
+			if (bottomOverflow > 0) {
+				logoCenter -= bottomOverflow
+				ctaCenter -= bottomOverflow
+			}
 		}
+
+		clampTop()
+		clampBottom()
+		clampTop()
 
 		return { logo: logoCenter, cta: ctaCenter }
-	}, [midLogoHeight, ctaHeight, finalLogoTargetY, ctaFinalY, viewportHeightPx])
+	}, [midLogoHeight, ctaHeight, finalLogoTargetY, ctaFinalY, viewportHeightPx, logoIdleAmplitude])
 
 	useEffect(() => {
 		const threshold = Math.min(finalStart + 0.02, 0.995)
@@ -565,11 +577,10 @@ function ParallaxScene() {
 			node.style.removeProperty("transform")
 			return undefined
 		}
-	const amplitude = Math.max(3, Math.min(LOGO_CTA_GAP - 1, LOGO_CTA_GAP * 0.85))
 		const animation = animate(node, {
 			keyframes: [
 				{ translateY: 0, rotateY: -1.5, duration: 0 },
-				{ translateY: -amplitude, rotateY: 1.5, duration: 2600, easing: "easeInOutSine" },
+				{ translateY: -logoIdleAmplitude, rotateY: 1.5, duration: 2600, easing: "easeInOutSine" },
 				{ translateY: 0, rotateY: -1.5, duration: 2600, easing: "easeInOutSine" },
 			],
 			loop: true,
@@ -579,7 +590,7 @@ function ParallaxScene() {
 			animation?.pause?.()
 			node.style.removeProperty("transform")
 		}
-	}, [logoIdleActive])
+	}, [logoIdleActive, logoIdleAmplitude])
 
 	return (
 		<section
