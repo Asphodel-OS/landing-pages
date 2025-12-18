@@ -56,7 +56,12 @@ function ParallaxScene() {
 	const midLogoRef = useRef(null)
 	const midLogoSpriteRef = useRef(null)
 	const ctaPanelRef = useRef(null)
-	const layoutWidth = viewport.w ? Math.min(viewport.w, MAX_SCENE_WIDTH) : 0
+	const layoutWidth = useMemo(() => {
+		const viewportWidth = viewport.w || 0
+		const baseWidth = Math.min(viewportWidth, MAX_SCENE_WIDTH)
+		if (!baseSize.w) return baseWidth
+		return Math.min(baseWidth, baseSize.w * pixelScale)
+	}, [viewport.w, baseSize.w, pixelScale])
 	const [midLogoHeight, setMidLogoHeight] = useState(0)
 	const [ctaHeight, setCtaHeight] = useState(0)
 	const [logoIdleActive, setLogoIdleActive] = useState(false)
