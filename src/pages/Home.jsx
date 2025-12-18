@@ -3,6 +3,7 @@ import { motion, useScroll, useTransform } from "framer-motion"
 import { RetroPanel, RetroRibbon, RetroButton } from "@/components/ui/8bit/RetroElements"
 import { KamiCreator } from "../components/KamiCreator/KamiCreator"
 import { animate } from "animejs"
+import { createNoise2D } from "simplex-noise"
 
 const layers = [
 	// Parallax via curve exponents:
@@ -60,6 +61,10 @@ function ParallaxScene() {
 	const midLogoRef = useRef(null)
 	const midLogoSpriteRef = useRef(null)
 	const ctaPanelRef = useRef(null)
+	const cloudCanvasRef = useRef(null)
+	const cloudShadowCanvasRef = useRef(null)
+	const groundMistCanvasRef = useRef(null)
+	const [cloudDimensions, setCloudDimensions] = useState({ width: 0, height: 0 })
 	const butterflyScrollRefs = useRef({})
 	const butterflyAnimeRefs = useRef({})
 	const butterflyAnims = useRef({})
@@ -274,7 +279,7 @@ function ParallaxScene() {
 	useEffect(() => {
 		const onResize = () => setViewport({ w: window.innerWidth, h: window.innerHeight })
 		onResize()
-		window.addEventListener("resize", onResize)
+		window.addEventListener("resize", onResize, { passive: true })
 		return () => window.removeEventListener("resize", onResize)
 	}, [])
 
@@ -397,7 +402,7 @@ function ParallaxScene() {
 
 		scheduleInitialCheck()
 		window.addEventListener("scroll", handleScrollOrResize, { passive: true })
-		window.addEventListener("resize", handleScrollOrResize)
+		window.addEventListener("resize", handleScrollOrResize, { passive: true })
 
 		return () => {
 			window.removeEventListener("scroll", handleScrollOrResize)
@@ -428,18 +433,25 @@ function ParallaxScene() {
 		if (typeof window === "undefined" || typeof ResizeObserver === "undefined") return undefined
 		const node = midLogoRef.current
 		if (!node) return undefined
+		
+		let timeoutId
 		const measure = () => {
 			const rect = node.getBoundingClientRect()
 			if (!rect?.height) return
-			setMidLogoHeight(Math.round(rect.height))
+			const height = Math.round(rect.height)
+			// Debounce rapid resize events
+			if (timeoutId) clearTimeout(timeoutId)
+			timeoutId = setTimeout(() => setMidLogoHeight(height), 100)
 		}
+		
 		measure()
 		const ro = new ResizeObserver(() => measure())
 		ro.observe(node)
-		window.addEventListener("resize", measure)
+		window.addEventListener("resize", measure, { passive: true })
 		return () => {
 			window.removeEventListener("resize", measure)
 			ro.disconnect()
+			if (timeoutId) clearTimeout(timeoutId)
 		}
 	}, [logoMaxWidth, logoPaddingX, viewport.w, viewport.h])
 
@@ -447,18 +459,24 @@ function ParallaxScene() {
 		if (typeof window === "undefined" || typeof ResizeObserver === "undefined") return undefined
 		const node = ctaPanelRef.current
 		if (!node) return undefined
+		
+		let timeoutId
 		const measure = () => {
 			const rect = node.getBoundingClientRect()
 			if (!rect?.height) return
-			setCtaHeight(Math.round(rect.height))
+			const height = Math.round(rect.height)
+			if (timeoutId) clearTimeout(timeoutId)
+			timeoutId = setTimeout(() => setCtaHeight(height), 100)
 		}
+		
 		measure()
 		const ro = new ResizeObserver(() => measure())
 		ro.observe(node)
-		window.addEventListener("resize", measure)
+		window.addEventListener("resize", measure, { passive: true })
 		return () => {
 			window.removeEventListener("resize", measure)
 			ro.disconnect()
+			if (timeoutId) clearTimeout(timeoutId)
 		}
 	}, [ctaCols, ctaGapTight, ctaMaxWidth, viewport.w, viewport.h])
 
@@ -610,6 +628,379 @@ function ParallaxScene() {
 		}
 	}, [logoIdleActive, logoIdleAmplitude])
 
+	// Spooky procedural cloud layer using simplex noise
+	useEffect(() => {
+		const canvas = cloudCanvasRef.current
+		if (!canvas) return undefined
+		const ctx = canvas.getContext("2d", { alpha: true, willReadFrequently: false })
+		if (!ctx) return undefined
+
+		const noise2D = createNoise2D()
+		let animationId
+		let timeOffset = 0
+		let lastFrameTime = 0
+		const targetFPS = 30 // Limit to 30fps instead of 60fps
+		const frameInterval = 1000 / targetFPS
+
+		const render = (timestamp) => {
+			// Throttle to target FPS
+			if (timestamp - lastFrameTime < frameInterval) {
+				animationId = requestAnimationFrame(render)
+				return
+			}
+			lastFrameTime = timestamp
+
+			const { width, height } = canvas
+			if (width === 0 || height === 0) return
+
+			// Clear with transparency
+			ctx.clearRect(0, 0, width, height)
+
+			// Render at lower resolution for performance, then scale up
+			const renderScale = 0.5 // Render at half resolution
+			const renderWidth = Math.floor(width * renderScale)
+			const renderHeight = Math.floor(height * renderScale)
+
+			const imageData = ctx.createImageData(renderWidth, renderHeight)
+			const data = imageData.data
+
+			// Larger pixel blocks = fewer calculations
+			const pixelSize = 6 // Increased from 4
+
+			for (let y = 0; y < renderHeight; y += pixelSize) {
+				for (let x = 0; x < renderWidth; x += pixelSize) {
+					// Scale coordinates back to original space for noise sampling
+					const scaleX1 = 0.0008
+					const scaleY1 = 0.004
+					const scaleX2 = 0.002
+					const scaleY2 = 0.008
+
+					const nx = x / renderScale
+					const ny = y / renderScale
+
+					const n1 = noise2D((nx + timeOffset * 40) * scaleX1, ny * scaleY1)
+					const n2 = noise2D((nx + timeOffset * 60) * scaleX2, ny * scaleY2)
+
+					let value = n1 * 0.7 + n2 * 0.3
+					value = (value + 1) / 2
+
+					const threshold = 0.5
+					const softness = 0.12
+					let alpha = (value - threshold) / softness
+					alpha = Math.max(0, Math.min(1, alpha))
+
+					const verticalFade = 1 - (ny / (height / renderScale)) * 0.5
+					alpha *= verticalFade
+
+					if (alpha > 0.01) {
+						const r = 40 + value * 30
+						const g = 30 + value * 40
+						const b = 60 + value * 50
+						const a = alpha * 180
+
+						for (let py = 0; py < pixelSize && y + py < renderHeight; py++) {
+							for (let px = 0; px < pixelSize && x + px < renderWidth; px++) {
+								const idx = ((y + py) * renderWidth + (x + px)) * 4
+								data[idx] = r
+								data[idx + 1] = g
+								data[idx + 2] = b
+								data[idx + 3] = a
+							}
+						}
+					}
+				}
+			}
+
+			// Draw lower-res image and scale up with image smoothing
+			ctx.putImageData(imageData, 0, 0)
+			if (renderScale !== 1) {
+				// Create temp canvas at full resolution
+				const tempCanvas = document.createElement('canvas')
+				tempCanvas.width = renderWidth
+				tempCanvas.height = renderHeight
+				const tempCtx = tempCanvas.getContext('2d')
+				tempCtx.putImageData(imageData, 0, 0)
+				
+				// Scale up to full size
+				ctx.imageSmoothingEnabled = true
+				ctx.imageSmoothingQuality = 'low' // Faster than 'high'
+				ctx.clearRect(0, 0, width, height)
+				ctx.drawImage(tempCanvas, 0, 0, renderWidth, renderHeight, 0, 0, width, height)
+			}
+
+			timeOffset += 0.002
+			animationId = requestAnimationFrame(render)
+		}
+
+		animationId = requestAnimationFrame(render)
+		return () => {
+			if (animationId) cancelAnimationFrame(animationId)
+		}
+	}, [])
+
+	// Cloud shadow layer - same noise pattern but offset, rendered as dark shadows on foreground
+	useEffect(() => {
+		const canvas = cloudShadowCanvasRef.current
+		if (!canvas) return undefined
+		const ctx = canvas.getContext("2d", { alpha: true, willReadFrequently: false })
+		if (!ctx) return undefined
+
+		const noise2D = createNoise2D()
+		let animationId
+		let timeOffset = 0
+		let lastFrameTime = 0
+		const targetFPS = 30
+		const frameInterval = 1000 / targetFPS
+
+		const render = (timestamp) => {
+			if (timestamp - lastFrameTime < frameInterval) {
+				animationId = requestAnimationFrame(render)
+				return
+			}
+			lastFrameTime = timestamp
+
+			const { width, height } = canvas
+			if (width === 0 || height === 0) return
+
+			ctx.clearRect(0, 0, width, height)
+
+			const renderScale = 0.5
+			const renderWidth = Math.floor(width * renderScale)
+			const renderHeight = Math.floor(height * renderScale)
+
+			const imageData = ctx.createImageData(renderWidth, renderHeight)
+			const data = imageData.data
+
+			const pixelSize = 6
+			const shadowOffsetX = 80
+			const shadowOffsetY = 40
+
+			for (let y = 0; y < renderHeight; y += pixelSize) {
+				for (let x = 0; x < renderWidth; x += pixelSize) {
+					const scaleX1 = 0.0008
+					const scaleY1 = 0.004
+					const scaleX2 = 0.002
+					const scaleY2 = 0.008
+
+					const nx = x / renderScale
+					const ny = y / renderScale
+
+					const n1 = noise2D((nx + shadowOffsetX + timeOffset * 40) * scaleX1, (ny + shadowOffsetY) * scaleY1)
+					const n2 = noise2D((nx + shadowOffsetX + timeOffset * 60) * scaleX2, (ny + shadowOffsetY) * scaleY2)
+
+					let value = n1 * 0.7 + n2 * 0.3
+					value = (value + 1) / 2
+
+					const threshold = 0.5
+					const softness = 0.12
+					let alpha = (value - threshold) / softness
+					alpha = Math.max(0, Math.min(1, alpha))
+
+					const verticalFade = 1 - (ny / (height / renderScale)) * 0.5
+					alpha *= verticalFade
+
+					if (alpha > 0.01) {
+						const r = 15
+						const g = 10
+						const b = 20
+						const a = alpha * 150
+
+						for (let py = 0; py < pixelSize && y + py < renderHeight; py++) {
+							for (let px = 0; px < pixelSize && x + px < renderWidth; px++) {
+								const idx = ((y + py) * renderWidth + (x + px)) * 4
+								data[idx] = r
+								data[idx + 1] = g
+								data[idx + 2] = b
+								data[idx + 3] = a
+							}
+						}
+					}
+				}
+			}
+
+			ctx.putImageData(imageData, 0, 0)
+			if (renderScale !== 1) {
+				const tempCanvas = document.createElement('canvas')
+				tempCanvas.width = renderWidth
+				tempCanvas.height = renderHeight
+				const tempCtx = tempCanvas.getContext('2d')
+				tempCtx.putImageData(imageData, 0, 0)
+				
+				ctx.imageSmoothingEnabled = true
+				ctx.imageSmoothingQuality = 'low'
+				ctx.clearRect(0, 0, width, height)
+				ctx.drawImage(tempCanvas, 0, 0, renderWidth, renderHeight, 0, 0, width, height)
+			}
+
+			timeOffset += 0.002
+			animationId = requestAnimationFrame(render)
+		}
+
+		animationId = requestAnimationFrame(render)
+		return () => {
+			if (animationId) cancelAnimationFrame(animationId)
+		}
+	}, [])
+
+	// Ground mist layer - dense fog at the bottom of the scene, visible at max scroll
+	useEffect(() => {
+		const canvas = groundMistCanvasRef.current
+		if (!canvas) return undefined
+		const ctx = canvas.getContext("2d", { alpha: true, willReadFrequently: false })
+		if (!ctx) return undefined
+
+		const noise2D = createNoise2D()
+		let animationId
+		let timeOffset = 0
+		let lastFrameTime = 0
+		const targetFPS = 30
+		const frameInterval = 1000 / targetFPS
+
+		const render = (timestamp) => {
+			if (timestamp - lastFrameTime < frameInterval) {
+				animationId = requestAnimationFrame(render)
+				return
+			}
+			lastFrameTime = timestamp
+
+			const { width, height } = canvas
+			if (width === 0 || height === 0) return
+
+			ctx.clearRect(0, 0, width, height)
+
+			const renderScale = 0.5
+			const renderWidth = Math.floor(width * renderScale)
+			const renderHeight = Math.floor(height * renderScale)
+
+			const imageData = ctx.createImageData(renderWidth, renderHeight)
+			const data = imageData.data
+
+			const pixelSize = 5
+			const fogHeightPercent = 0.2 // Take up 20% of screen from bottom
+
+			for (let y = 0; y < renderHeight; y += pixelSize) {
+				for (let x = 0; x < renderWidth; x += pixelSize) {
+					// 1/3 as stretched in x = 3x larger scale value
+					const scaleX = 0.0018 // Was 0.0006, now 3x
+					const scaleY = 0.012
+
+					const nx = x / renderScale
+					const ny = y / renderScale
+
+					const n1 = noise2D((nx + timeOffset * 33) * scaleX, ny * scaleY) // Faster movement
+					const n2 = noise2D((nx - timeOffset * 20) * scaleX * 2, ny * scaleY * 1.5)
+
+					let value = n1 * 0.6 + n2 * 0.4
+					value = (value + 1) / 2
+
+					const threshold = 0.42
+					const softness = 0.18
+					let alpha = (value - threshold) / softness
+					alpha = Math.max(0, Math.min(1, alpha))
+
+					// Only render in bottom 20% of screen
+					const normalizedY = ny / (height / renderScale)
+					const fogZone = 1 - fogHeightPercent // Top of fog zone (80% down)
+					
+					if (normalizedY < fogZone) {
+						// Above fog zone, no fog
+						continue
+					}
+					
+					// Within fog zone: fade from top of zone (0) to bottom (1)
+					const fogDepth = (normalizedY - fogZone) / fogHeightPercent
+					const bottomFade = Math.pow(fogDepth, 1.5) // Gentler falloff for denser fog
+					alpha *= bottomFade
+
+					if (alpha > 0.01) {
+						const r = 45 + value * 20
+						const g = 40 + value * 25
+						const b = 65 + value * 30
+						const a = alpha * 220 // Slightly denser
+
+						for (let py = 0; py < pixelSize && y + py < renderHeight; py++) {
+							for (let px = 0; px < pixelSize && x + px < renderWidth; px++) {
+								const idx = ((y + py) * renderWidth + (x + px)) * 4
+								data[idx] = r
+								data[idx + 1] = g
+								data[idx + 2] = b
+								data[idx + 3] = a
+							}
+						}
+					}
+				}
+			}
+
+			ctx.putImageData(imageData, 0, 0)
+			if (renderScale !== 1) {
+				const tempCanvas = document.createElement('canvas')
+				tempCanvas.width = renderWidth
+				tempCanvas.height = renderHeight
+				const tempCtx = tempCanvas.getContext('2d')
+				tempCtx.putImageData(imageData, 0, 0)
+				
+				ctx.imageSmoothingEnabled = true
+				ctx.imageSmoothingQuality = 'low'
+				ctx.clearRect(0, 0, width, height)
+				ctx.drawImage(tempCanvas, 0, 0, renderWidth, renderHeight, 0, 0, width, height)
+			}
+
+			timeOffset += 0.0027 // 1/3 faster than other clouds (was 0.0015, now ~1.8x for 33% faster)
+			animationId = requestAnimationFrame(render)
+		}
+
+		animationId = requestAnimationFrame(render)
+		return () => {
+			if (animationId) cancelAnimationFrame(animationId)
+		}
+	}, [])
+
+	// Resize all cloud canvases to match scene
+	useEffect(() => {
+		// Calculate cloud dimensions: match backdrop width, fill viewport height
+		const backdropWidth = baseSize.w * pixelScale || viewport.w
+		const viewportHeight = viewport.h || 0
+		
+		if (backdropWidth > 0 && viewportHeight > 0) {
+			setCloudDimensions({ width: backdropWidth, height: viewportHeight })
+		}
+
+		let resizeTimeout
+		const resize = (canvas) => {
+			if (!canvas) return
+			const dpr = Math.min(window.devicePixelRatio || 1, 2) // Cap at 2x for performance
+			const w = cloudDimensions.width || viewport.w
+			const h = cloudDimensions.height || viewport.h
+			
+			canvas.width = w * dpr
+			canvas.height = h * dpr
+			canvas.style.width = `${w}px`
+			canvas.style.height = `${h}px`
+			const ctx = canvas.getContext("2d")
+			if (ctx) ctx.scale(dpr, dpr)
+		}
+
+		resize(cloudCanvasRef.current)
+		resize(cloudShadowCanvasRef.current)
+		resize(groundMistCanvasRef.current)
+
+		const handleResize = () => {
+			// Debounce resize events
+			if (resizeTimeout) clearTimeout(resizeTimeout)
+			resizeTimeout = setTimeout(() => {
+				resize(cloudCanvasRef.current)
+				resize(cloudShadowCanvasRef.current)
+				resize(groundMistCanvasRef.current)
+			}, 150)
+		}
+
+		window.addEventListener("resize", handleResize, { passive: true })
+		return () => {
+			window.removeEventListener("resize", handleResize)
+			if (resizeTimeout) clearTimeout(resizeTimeout)
+		}
+	}, [viewport.w, viewport.h, baseSize.w, pixelScale, cloudDimensions.width, cloudDimensions.height])
+
 	useEffect(() => {
 		if (typeof window === "undefined" || typeof IntersectionObserver === "undefined") return undefined
 		const root = stickyRef.current
@@ -628,7 +1019,7 @@ function ParallaxScene() {
 			const node = butterflyAnimeRefs.current[src]
 			if (!node) return
 			const anim = butterflyAnims.current[src]
-			anim?.pause?.()
+			if (anim?.pause) anim.pause()
 			delete butterflyAnims.current[src]
 			// Reset to default relationships (no anime transforms)
 			node.style.removeProperty("transform")
@@ -659,9 +1050,6 @@ function ParallaxScene() {
 			if (existing?.pause) existing.pause()
 			delete butterflyAnims.current[src]
 
-			// eslint-disable-next-line no-console
-			console.log("[butterflies] starting animation for", src, profile)
-
 			try {
 				// Use same keyframes format as the working logo animation
 				const anim = animate(node, {
@@ -674,8 +1062,6 @@ function ParallaxScene() {
 					loop: true,
 				})
 				butterflyAnims.current[src] = anim
-				// eslint-disable-next-line no-console
-				console.log("[butterflies] animation started successfully for", src)
 			} catch (error) {
 				// eslint-disable-next-line no-console
 				console.warn("[butterflies] anime failed to start", src, error)
@@ -689,8 +1075,6 @@ function ParallaxScene() {
 					if (!src) return
 					const wasVisible = Boolean(butterflyVisible.current[src])
 					const isVisible = Boolean(entry.isIntersecting && entry.intersectionRatio > 0)
-					// eslint-disable-next-line no-console
-					console.log("[butterflies] observer callback", { src, wasVisible, isVisible, ratio: entry.intersectionRatio })
 					if (isVisible && !wasVisible) {
 						butterflyVisible.current[src] = true
 						startOrRestart(src)
@@ -747,6 +1131,18 @@ function ParallaxScene() {
 						transformOrigin: "center",
 						}}
 				>
+					{/* Procedural spooky cloud layer - between backdrop and other layers */}
+					<canvas
+						ref={cloudCanvasRef}
+						className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
+						style={{ 
+							zIndex: 5,
+							width: cloudDimensions.width || "100%",
+							height: cloudDimensions.height || "100%",
+							opacity: 0.6,
+							mixBlendMode: "screen"
+						}}
+					/>
 					{layers.map((layer) => {
 						const isButterfly =
 							layer.src === "/assets/title-screen/Butterflies_1.png" ||
@@ -808,6 +1204,53 @@ function ParallaxScene() {
 							</div>
 						)
 					})}
+					{/* Cloud shadow layer - masks foreground elements (mountains, river, etc) with offset shadows */}
+					{(() => {
+						// Shadow layer follows parallax of foreground objects (z:10-40)
+						// Use averaged power from the foreground layers for realistic movement
+						const avgPower = (8 + 10 + 11 + 12) / 4 // Mountains, River, Gravestones, Torii average
+						const curved = useTransform(scrollYProgress, (v) =>
+							Math.pow(Math.min(1, Math.max(0, v)), avgPower)
+						)
+						// Use average offset of foreground layers
+						const avgLayerOffset = [
+							responsiveLayerOffsets["/assets/title-screen/Mountain_range.png"],
+							responsiveLayerOffsets["/assets/title-screen/River.png"],
+							responsiveLayerOffsets["/assets/title-screen/Gravestones.png"],
+							responsiveLayerOffsets["/assets/title-screen/Torii_gate.png"]
+						].reduce((sum, offset) => sum + (offset || 0), 0) / 4
+						
+						const baseOffset = avgLayerOffset * (viewport.h || 0)
+						const startOffset = baseOffset * layerOffsetScale
+						const y = useTransform(curved, [0, 1], [startOffset, -backdropTravel])
+						
+						return (
+							<motion.canvas
+								ref={cloudShadowCanvasRef}
+								className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
+								style={{ 
+									zIndex: 55, // Above foreground layers (10-40) but below butterflies (60+)
+									width: cloudDimensions.width || "100%",
+									height: cloudDimensions.height || "100%",
+									opacity: 0.6,
+									mixBlendMode: "multiply", // Darkens what's underneath
+									y
+								}}
+							/>
+						)
+					})()}
+					{/* Ground mist layer - dense fog at bottom edge, most visible at max scroll */}
+					<canvas
+						ref={groundMistCanvasRef}
+						className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
+						style={{ 
+							zIndex: 85, // Above butterflies but below UI
+							width: cloudDimensions.width || "100%",
+							height: cloudDimensions.height || "100%",
+							opacity: 0.75,
+							mixBlendMode: "screen" // Brightens like glowing mist
+						}}
+					/>
 				{/* Intro overlay: Asphodel Studios presents */}
 				{(() => {
 					const opacity = useTransform(
