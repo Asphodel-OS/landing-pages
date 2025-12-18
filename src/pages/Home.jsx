@@ -600,7 +600,7 @@ function ParallaxScene() {
 				height: `${sectionHeight}px`,
 				position: "relative",
 				maxWidth: `${MAX_SCENE_WIDTH}px`,
-				width: "100%",
+				width: layoutWidth ? `${layoutWidth}px` : "100%",
 				margin: "0 auto",
 		}}
 		>
