@@ -849,7 +849,7 @@ function ParallaxScene() {
 
 export default function Home() {
 	return (
-		<div className="min-h-[100vh] bg-[#0f1130]">
+		<div className="min-h-[100vh] bg-[#0b0d26]">
 			<ParallaxScene />
 		</div>
 	)
