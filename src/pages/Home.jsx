@@ -645,10 +645,10 @@ function ParallaxScene() {
 			// Deterministic opposing drift per butterfly
 			const profile =
 				src.endsWith("Butterflies_1.png")
-					? { x: 36, y: 52, rot: 4.4, yaw: -4.0, dur: 6400 }
+					? { x: 18, y: 26, rot: 2.2, yaw: -2.0, dur: 6400 }
 					: src.endsWith("Butterflies_2.png")
-						? { x: -44, y: 40, rot: -4.0, yaw: 4.4, dur: 7000 }
-						: { x: 28, y: 60, rot: 3.6, yaw: 3.2, dur: 7600 }
+						? { x: -22, y: 20, rot: -2.0, yaw: 2.2, dur: 7000 }
+						: { x: 14, y: 30, rot: 1.8, yaw: 1.6, dur: 7600 }
 
 			// Never move downwards: keep translateY <= 0 so the "top of the div" never slides into view.
 			const baselineY = 0
