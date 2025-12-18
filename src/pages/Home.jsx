@@ -222,7 +222,7 @@ function ParallaxScene() {
 				layerOffsets: withLayerOffsets({
 					"/assets/title-screen/Mountain_range.png": 0.65,
 					"/assets/title-screen/River.png": 0.72,
-					"/assets/title-screen/Gravestones.png": 0.59,
+					"/assets/title-screen/Gravestones.png": 0.62,
 					"/assets/title-screen/Torii_gate.png": 0.6,
 				}),
 			}
