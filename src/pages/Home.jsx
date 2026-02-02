@@ -113,34 +113,7 @@ function ParallaxScene() {
 			logoPaddingX: 24,
 		}
 
-		if (w <= 600) {
-			return {
-				...base,
-				scrollPages: 2.3,
-				introFraction: 0.15,
-				introDelayFraction: 0.005,
-				ctaRevealRatio: 0.55,
-				introPaddingTop: 80,
-				introPaddingX: 16,
-				introCardPadding: "16px 18px",
-				introMaxWidth: 320,
-				ctaWrapperPaddingX: 16,
-				ctaWrapperPaddingY: 22,
-				ctaPanelPadding: "24px 20px",
-				ctaMaxWidth: 380,
-				ctaCols: 1,
-				ctaGap: 16,
-				logoRatio: 0.08,
-				logoMaxWidth: 360,
-				logoPaddingX: 12,
-				layerOffsets: withLayerOffsets({
-					"/assets/title-screen/Mountain_range.png": 0.44,
-					"/assets/title-screen/River.png": 0.48,
-					"/assets/title-screen/Gravestones.png": 0.52,
-					"/assets/title-screen/Torii_gate.png": 0.48,
-				}),
-			}
-		}
+
 
 		if (w <= 900) {
 			return {
@@ -540,9 +513,13 @@ function ParallaxScene() {
 	)
 	const finalLogoBaseY = useMemo(() => {
 		const vh = viewport.h || 780
-		const dynamicLift = Math.min(vh * 0.74, 660)
-		return -Math.max(dynamicLift, 300)
-	}, [viewport.h])
+		const vw = viewport.w || 1440
+		// For narrow viewports, we need to be more conservative with the lift
+		// to ensure the logo doesn't disappear off the top.
+		const maxLift = vw < 800 ? vh * 0.35 : vh * 0.74
+		const dynamicLift = Math.min(maxLift, 660)
+		return -Math.max(dynamicLift, 180)
+	}, [viewport.h, viewport.w])
 	const finalLogoFallbackY = useMemo(
 		() => (needsTightSpacing ? finalLogoBaseY * 0.92 : finalLogoBaseY),
 		[finalLogoBaseY, needsTightSpacing]
@@ -567,8 +544,8 @@ function ParallaxScene() {
 
 		let logoCenter = finalLogoTargetY
 		let ctaCenter = ctaFinalY
-		const topBound = -viewportHalf + STACK_SAFE_MARGIN + logoIdleAmplitude
-		const bottomBound = viewportHalf - STACK_SAFE_MARGIN
+		const topBound = -viewportHalf + STACK_SAFE_MARGIN + logoIdleAmplitude + 10
+		const bottomBound = viewportHalf - STACK_SAFE_MARGIN - 10
 
 		const clampTop = () => {
 			const logoTop = logoCenter - midLogoHeight / 2
@@ -1093,7 +1070,7 @@ function ParallaxScene() {
 					)
 					return (
 						<motion.div
-							className={`absolute inset-0 z-[92] flex ${isVeryNarrow ? "items-start" : "items-center"} justify-center pointer-events-none`}
+							className={`absolute inset-0 z-[92] flex items-center justify-center pointer-events-none`}
 							style={{ opacity }}
 						>
 							<motion.div ref={midLogoRef} style={{ y, width: "100%", maxWidth: logoMaxWidth, padding: `0 ${logoPaddingX}px` }}>
